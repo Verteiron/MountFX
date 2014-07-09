@@ -1,0 +1,1 @@
+Scriptname vMFX_FXPlugHorseEyeFX extends vMFX_FXPluginBase  

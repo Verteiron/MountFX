@@ -1,0 +1,1 @@
+Scriptname vMFX_PlayerAliasScript extends ReferenceAlias  

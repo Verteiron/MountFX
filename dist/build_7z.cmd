@@ -14,7 +14,7 @@ xcopy /y ..\data\*readme* .
 xcopy /y ..\..\doc\*readme* .
 echo d | xcopy /e /y ..\data\skse skse
 echo d | xcopy /e /y ..\data\vMFX vMFX
-"%ZEXE%" a -r "vMFX_BakedBeans_%NEWTIME%.7z" "*"
+"%ZEXE%" a -r "vMFX_MountFX_%NEWTIME%.7z" "*"
 xcopy /y *.7z ..
 cd ..
 ping -n 1 -w 1000 1.0.0.0 > nul

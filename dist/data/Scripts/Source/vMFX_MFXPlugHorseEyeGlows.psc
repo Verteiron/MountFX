@@ -1,0 +1,1 @@
+Scriptname vMFX_MFXPlugHorseEyeGlows extends vMFX_FXPluginBase  

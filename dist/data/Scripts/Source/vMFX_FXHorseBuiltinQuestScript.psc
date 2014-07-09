@@ -1,0 +1,1 @@
+Scriptname vMFX_FXHorseBuiltinQuestScript extends vMFX_FXPluginBase  
