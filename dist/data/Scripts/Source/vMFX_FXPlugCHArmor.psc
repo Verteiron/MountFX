@@ -2,7 +2,7 @@ Scriptname vMFX_FXPlugCHArmor extends vMFX_FXPluginBase
 
 Import Utility
 
-GlobalVariable Property CHHorseArmorMode Auto
+GlobalVariable Property CHHorseEquipmentMode Auto
 
 Bool Property ManeHidden Hidden
 	Function Set(Bool bManeHidden)
@@ -42,9 +42,9 @@ EndFunction
 
 Function HandleCHVars(Armor akArmor)
 	Int ArmorIndex = CHArmorIndex(akArmor)
-	CHHorseArmorMode.SetValueInt(ArmorIndex + 1) ; Set to 0 if not found, otherwise to appropriate CHHorseArmorMode
+	CHHorseEquipmentMode.SetValueInt(ArmorIndex + 1) ; Set to 0 if not found, otherwise to appropriate CHHorseEquipmentMode
 	Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): akArmor is " + akArmor + " at index " + ArmorIndex)
-	If ArmorIndex >= 0
+	If akArmor.HasKeywordString("CHHorseArmor")
 		ManeHidden = True
 	Else
 		ManeHidden = False
@@ -120,7 +120,7 @@ Event OnMFXArmorCheck(String eventName, String strArg, Float numArg, Form sender
 	EndIf
 	Busy = False
 	If numArg == 30 || numArg == 45 || numArg == 50 
-		If CHHorseArmorMode.GetValue() > 0
+		If CHHorseEquipmentMode.GetValue() > 0
 			ManeHidden = True
 		Else
 			ManeHidden = False
