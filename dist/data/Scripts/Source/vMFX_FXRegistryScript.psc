@@ -853,18 +853,6 @@ Function ApplyCurrentOutfit(Actor PlayerMount)
 	EndWhile
 	WaitMenuMode(1.0)
 	VerifyOutfit()
-	;Function AddOverrideFloat(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index, float value, bool persist) native global
-	;NIOverride(_CurrentMount, _CurrentMount.GetActorBase().GetSex(),
-	
-	;Function AddNodeOverrideFloat(ObjectReference ref, bool isFemale, string node, int key, int index, float value, bool persist) native global
-;	Float f = 1.0
-;	While f > 0
-;		f -= 0.05
-;		NIOverride.AddNodeOverrideFloat(_CurrentMount,_CurrentMount.GetActorBase().GetSex(),"horse:1",8,-1,2 * f,True)
-;		NIOverride.AddNodeOverrideFloat(_CurrentMount,_CurrentMount.GetActorBase().GetSex(),"horse:2",8,-1,f,True)
-;		WaitMenuMode(0.25)
-;	EndWhile
-	
 EndFunction
 
 Function VerifyOutfit()
