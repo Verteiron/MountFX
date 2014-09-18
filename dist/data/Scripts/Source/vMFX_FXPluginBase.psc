@@ -15,7 +15,10 @@ Actor Property CurrentMount = None Auto Hidden
 Bool Property Busy = False Auto Hidden
 
 Bool Property dataChangesBody = False Auto
-{This plugin alters the basic model enough to break other plugins. Needed for Dawnguard's skeletal horse.}
+{This plugin alters the basic model enough to break other plugins. Needed for Arvak.}
+
+Bool Property dataTextureSwapOnly = False Auto
+{This plugin takes the supplied armor and copies its attached TextureSet to the target without equipping it.}
 
 Formlist Property dataRequiredArmorList Auto
 {What armor, if any, must be equipped or selected in order to use this plugin.}
