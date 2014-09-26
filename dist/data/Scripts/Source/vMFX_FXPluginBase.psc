@@ -20,6 +20,9 @@ Bool Property dataChangesBody = False Auto
 Bool Property dataTextureSwapOnly = False Auto
 {This plugin takes the supplied armor and copies its attached TextureSet to the target without equipping it.}
 
+String[] Property dataTextureSwapNodeList Auto
+{The list of NITriShape nodes that the texture should apply to}
+
 Formlist Property dataRequiredArmorList Auto
 {What armor, if any, must be equipped or selected in order to use this plugin.}
 
@@ -29,20 +32,14 @@ Int[] Property dataUnsupportedSlot Auto
 Int Property infoPriority = 1 Auto
 {0 is first. Default is 1. If you are extending an existing plugin, this should be higher than that plugin's priority.}
 
-Bool Property dataAddsArmorSlots = False Auto
-{Enable this if your mod adds new named data slots to the races in dataRace.}
-
-Int[] Property dataArmorSlotsUsed Auto
-{Slots used by armor in this plugin. Use this only if adding new Armor to an already-registered slot!}
-
-Int[] Property dataArmorNewSlotNumbers Auto
-{Slots used by this plugin or added to each Race in dataRace. See the documentation.}
-
-String[] Property dataArmorNewSlotNames Auto
-{New slot names to add to this Race. Index must match that of dataArmorNewSlotNumbers. See the documentation. }
-
 Race[] Property dataRaces Auto
 {The races this plugin will apply effects to. All races must share the same skeleton. Set to None to apply to ALL mountable races.}
+
+Int[] Property dataArmorSlotNumbers Auto
+{Slots used by this plugin or added to each Race in dataRaces. See the documentation.}
+
+String[] Property dataArmorSlotNames Auto
+{Names of any new Slots. Index must match that of dataArmorNewSlotNumbers. If missing, will not add a new named slot. See the documentation. }
 
 Formlist[] Property dataFormlists Auto
 {The formlist of every Armor, Spell, or additional Formlist you wish to register for this race.}
@@ -51,7 +48,7 @@ String Property	infoESPFile Auto
 {The name of the plugin's ESP file, like "vMFX_MountFX.esp".}
 
 String Property	infoPluginName Auto
-{The friendly name of the plugin. This should be the actual name of the ESP file.}
+{The friendly name of the plugin.}
 
 String Property infoAuthor Auto
 {The name of the plugin author.}
@@ -62,11 +59,13 @@ String Property infoArtCredit Auto
 Int Property infoVersion = 1 Auto
 {Version. Increment this if the plugin gets updated.}
 
+Int Property RegistryID = -1 Auto Hidden
+
 ;--=== Variables ===--
 
 Bool 					_Running
 
-Int						_RegistryID
+Int						RegistryID
 Int						_RegistryVersion
 
 vMFX_FXRegistryScript	_MFXRegistry
@@ -85,6 +84,7 @@ Event OnReset()
 EndEvent
 
 Event OnGameReload()
+	SetNodeList()
 	RegisterForModEvent("vMFX_MFXRegistryReady", "OnMFXRegistryReady")
 	RegisterForModEvent("vMFX_MFXArmorPick", "OnMFXArmorPick")
 	RegisterForModEvent("vMFX_MFXArmorEquip", "OnMFXArmorEquip")
@@ -135,7 +135,7 @@ Event OnMFXArmorCheck(String eventName, String strArg, Float numArg, Form sender
 ;numArg is the biped slot, sender is the armor
 ;This checks to see whether sender is equipped. If it isn't, equip it. 
 ;If sender is not armor, then unequip any item in the bipedslot provided by this plugin
-	If dataArmorSlotsUsed.Find(numArg as Int) < 0
+	If dataArmorSlotNumbers.Find(numArg as Int) < 0
 		Return
 	EndIf
 	While Busy
@@ -145,7 +145,7 @@ Event OnMFXArmorCheck(String eventName, String strArg, Float numArg, Form sender
 	;Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): OnMFXArmorCheck(strArg = " + strArg + ", numArg = " + numArg + ",sender = " + sender + ")")
 	If sender as Armor
 		If !_CurrentMount.IsEquipped(sender as Armor)
-			HandleEquip(sender as Armor)	
+			HandleEquip(sender as Armor)
 		EndIf
 	Else
 		RemovePluginArmor(numArg as Int)
@@ -163,42 +163,37 @@ Event OnMFXRegistryReady(String eventName, String strArg, Float numArg, Form sen
 		return
 	endIf
 	;Debug.Trace("MFXPlugin: Registering (" + infoESPFile + "/'" + infoPluginName + "')...")
-	If !dataArmorSlotsUsed
-		dataArmorSlotsUsed = dataArmorNewSlotNumbers
-	EndIf
 	Int Timer
 	While NewFXRegistry.MaxPriority < (infoPriority - 1) && Timer < 10
 		WaitMenuMode(1)
 		Timer += 1
 	EndWhile
-	_RegistryID = NewFXRegistry.RegisterPlugin(self)
+	RegistryID = NewFXRegistry.RegisterPlugin(self)
 
 	; Success
-	if (_RegistryID >= 0)
+	if (RegistryID >= 0)
 		_MFXRegistry = NewFXRegistry
-		;Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Registered as ID " + _RegistryID + "!")
+		;Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Registered as ID " + RegistryID + "!")
 		SendModEvent("vMFX_MFXPluginMessage","ready")
 ;		RegisterForSingleUpdate(0.1)
 	endIf
 EndEvent
 
-Event OnUpdate()
-	RegisterMFXPlugin()
-EndEvent
 ;--=== Functions ===--
+
+Function SetNodeList()
+{Override this with the list of nodes the textures should be copied for OR just set the property in CK}
+	If !dataTextureSwapNodeList
+		dataTextureSwapNodeList = New String[1]
+		dataTextureSwapNodeList[0] = "BODY"
+	EndIf
+EndFunction
 
 Function UpdateCurrentMount()
 	_CurrentMount = _MFXRegistry.CurrentMount
 	Debug.Trace("MFXPlugin: Current mount set to " + _CurrentMount)
 	;Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): OnMFXSetCurrentMount(strArg = " + strArg + ",sender = " + sender + ")")
 	CurrentMount = _CurrentMount
-EndFunction
-
-Function RegisterMFXPlugin()
-	;If dataRace
-		;Int RaceResult = _MFXRegistry.RegisterRace(dataRace)
-		;Debug.Trace("vMFX_FXPlugin(" + infoESPFile + "): Registered " + dataRace + " as " + RaceResult + "!")
-	;EndIf
 EndFunction
 
 Bool Function IsPluginArmor(Armor akArmor)
@@ -222,9 +217,13 @@ Function HandleEquip(Armor akArmor = None)
 	;WaitMenuMode((infoPriority as Float) * 0.1)
 	Int iSlotMask = akArmor.GetSlotMask()
 	Form CurrentArmor = _CurrentMount.GetWornForm(iSlotMask)
-	_CurrentMount.EquipItem(akArmor,True,True)
 	If CurrentArmor
 		_CurrentMount.RemoveItem(CurrentArmor)
+	EndIf
+	If dataTextureSwapOnly
+		ValidateTexturesFromArmor(akArmor)
+	Else
+		_CurrentMount.EquipItem(akArmor,True,True)
 	EndIf
 EndFunction
 
@@ -238,12 +237,15 @@ Function HandleUnequip(Armor akArmor = None)
 	If _CurrentMount.GetItemCount(akArmor) > 0 || _CurrentMount.IsEquipped(akArmor)
 		_CurrentMount.RemoveItem(akArmor,_CurrentMount.GetItemCount(akArmor),True)
 	EndIf
+	If dataTextureSwapOnly
+		ClearTextures()
+	EndIf
 EndFunction
 
 Function RemovePluginArmor(Int iBipedSlot)
 ;Remove plugin-provided armor from specified BipedSlot
 	Int SlotIndex 
-	SlotIndex = dataArmorSlotsUsed.Find(iBipedSlot)
+	SlotIndex = dataArmorSlotNumbers.Find(iBipedSlot)
 	If SlotIndex < 0 || SlotIndex >= dataFormLists.Length
 		;Debug.Trace("vMFX_FXPlugin(" + infoESPFile + "): Not managing slot " + iBipedSlot + ", so nothing to do.")
 		Return
@@ -258,6 +260,86 @@ Function RemovePluginArmor(Int iBipedSlot)
 	EndIf
 EndFunction
 
-String Function GetSlotName()
+Function CopyTexturesFromArmor(Armor akArmor)
+	If !CurrentMount
+		Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Aborting, no current mount!")
+		Return
+	EndIf
+	If !akArmor
+		Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Aborting, passed armor is invalid!")
+		Return
+	EndIf
+	Int iNodeIdx = 0
+	While iNodeIdx < dataTextureSwapNodeList.Length
+		String sNodeName = dataTextureSwapNodeList[iNodeIdx]
+		Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Checking node " + sNodeName + "...")
+		If sNodeName
+			If NIOverride.GetNodePropertyString(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName,9,0) ; First texture path, should always exist
+			;If NetImmerse.HasNode(CurrentMount,"sNodeName",True)
+				Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): CurrentMount has node " + sNodeName + "!")
+				ArmorAddon kArmorAddon = akArmor.GetNthArmorAddon(0)
+				Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Armor " + akArmor + " has AA " + kArmorAddon)
+				TextureSet kTextureSet = kArmorAddon.GetModelNthTextureSet(0,False,CurrentMount.GetActorBase().GetSex())
+				Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): AA " + kArmorAddon + " has TextureSet " + kTextureSet)
+				NIOverride.AddNodeOverrideTextureSet(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName,6,-1,kTextureSet,True)
+			EndIf
+		EndIf
+		iNodeIdx += 1
+	EndWhile
+EndFunction
 
+Function ValidateTexturesFromArmor(Armor akArmor)
+	If !CurrentMount
+		Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Aborting, no current mount!")
+		Return
+	EndIf
+	If !akArmor
+		Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Aborting, passed armor is invalid!")
+		Return
+	EndIf
+	Int iNodeIdx = 0
+	While iNodeIdx < dataTextureSwapNodeList.Length
+		String sNodeName = dataTextureSwapNodeList[iNodeIdx]
+		Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Checking node " + sNodeName + "...")
+		If sNodeName
+			If NIOverride.GetNodePropertyString(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName,9,0) ; First texture path, should always exist
+				Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): CurrentMount has node " + sNodeName + "!")
+				ArmorAddon kArmorAddon = akArmor.GetNthArmorAddon(0)
+				Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Armor " + akArmor + " has AA " + kArmorAddon)
+				TextureSet kTextureSet = kArmorAddon.GetModelNthTextureSet(0,False,CurrentMount.GetActorBase().GetSex())
+				Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): AA " + kArmorAddon + " has TextureSet " + kTextureSet)
+				If !NIOverride.HasNodeOverride(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName,6,-1)
+					NIOverride.AddNodeOverrideTextureSet(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName,6,-1,kTextureSet,True)
+				Else
+					If NIOverride.GetNodeOverrideTextureSet(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName,6,-1) != kTextureSet
+						NIOverride.AddNodeOverrideTextureSet(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName,6,-1,kTextureSet,True)
+					EndIf
+				EndIf
+			;If NetImmerse.HasNode(CurrentMount,"sNodeName",True)
+			EndIf
+		EndIf
+		iNodeIdx += 1
+	EndWhile
+EndFunction
+
+Function ClearTextures()
+	Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Clearing textures...")
+	If !CurrentMount
+		Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Aborting, no current mount!")
+		Return
+	EndIf
+	Int iNodeIdx = 0
+	While iNodeIdx < dataTextureSwapNodeList.Length
+		String sNodeName = dataTextureSwapNodeList[iNodeIdx]
+		Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Checking node " + sNodeName + "...")
+		If sNodeName
+			If NIOverride.GetNodePropertyString(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName,9,0) ; First texture path, should always exist
+			;If NetImmerse.HasNode(CurrentMount,"sNodeName",True)
+				Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): CurrentMount has node " + sNodeName + "!")
+				NIOverride.RemoveAllNodeNameOverrides(CurrentMount,CurrentMount.GetActorBase().GetSex(),sNodeName)
+				Debug.Trace("MFXPlugin: (" + infoESPFile + "/'" + infoPluginName + "'): Removed overrides for " + sNodeName + " on CurrentMount!")
+			EndIf
+		EndIf
+		iNodeIdx += 1
+	EndWhile
 EndFunction

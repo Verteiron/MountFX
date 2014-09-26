@@ -1,1 +1,0 @@
-Scriptname vMFX_FXPlugHorseMainTail extends vMFX_FXPluginBase  

@@ -9,8 +9,6 @@ Import vMFX_Registry
 
 ;--=== Properties ===--
 
-Int Property ARRAYMAX = 512 AutoReadOnly Hidden
-
 Actor Property PlayerRef Auto
 
 Actor Property CurrentMount = None Auto Hidden
@@ -107,85 +105,6 @@ Form[]		_OutfitPrevious
 Actor		_CurrentMount
 
 Int 		_iPriorityCheck
-
-;--Registry arrays
-
-Int[]					_regSlots1
-Form[]					_regArmors1
-Form[]					_regPlugins1
-Form[]					_regRaces1
-Int[]		_regLookupSlotRace1
-Int[]		_regLookupRace1
-Int[]		_regLookupPlugin1
-Int[]		_regLookupArmor1
-Int[]		_regLookupSlot1
-Int[]		_regLookupRaceSlot1
-Int[]		_regLookupPluginRace1
-Int[]		_regLookupRacePlugin1
-Int[]		_regLookupPluginSlot1
-Int[]		_regLookupSlotPlugin1
-Int[]		_regLookupArmorSlot1
-Int[]		_regLookupSlotArmor1
-Int[]		_regLookupArmorPlugin1
-Int[]		_regLookupPluginArmor1
-
-Int[]					_regSlots2
-Form[]					_regArmors2
-Form[]					_regPlugins2
-Form[]					_regRaces2
-Int[]		_regLookupRace2
-Int[]		_regLookupPlugin2
-Int[]		_regLookupArmor2
-Int[]		_regLookupSlot2
-Int[]		_regLookupSlotRace2
-Int[]		_regLookupRaceSlot2
-Int[]		_regLookupPluginRace2
-Int[]		_regLookupRacePlugin2
-Int[]		_regLookupPluginSlot2
-Int[]		_regLookupSlotPlugin2
-Int[]		_regLookupArmorSlot2
-Int[]		_regLookupSlotArmor2
-Int[]		_regLookupArmorPlugin2
-Int[]		_regLookupPluginArmor2
-
-Int[]					_regSlots3
-Form[]					_regArmors3
-Form[]					_regPlugins3
-Form[]					_regRaces3
-Int[]		_regLookupRace3
-Int[]		_regLookupPlugin3
-Int[]		_regLookupArmor3
-Int[]		_regLookupSlot3
-Int[]		_regLookupSlotRace3
-Int[]		_regLookupRaceSlot3
-Int[]		_regLookupPluginRace3
-Int[]		_regLookupRacePlugin3
-Int[]		_regLookupPluginSlot3
-Int[]		_regLookupSlotPlugin3
-Int[]		_regLookupArmorSlot3
-Int[]		_regLookupSlotArmor3
-Int[]		_regLookupArmorPlugin3
-Int[]		_regLookupPluginArmor3
-
-Int[]					_regSlots4
-Form[]					_regArmors4
-Form[]					_regPlugins4
-Form[]					_regRaces4
-Int[]		_regLookupRace4
-Int[]		_regLookupPlugin4
-Int[]		_regLookupArmor4
-Int[]		_regLookupSlot4
-Int[]		_regLookupSlotRace4
-Int[]		_regLookupRaceSlot4
-Int[]		_regLookupPluginRace4
-Int[]		_regLookupRacePlugin4
-Int[]		_regLookupPluginSlot4
-Int[]		_regLookupSlotPlugin4
-Int[]		_regLookupArmorSlot4
-Int[]		_regLookupSlotArmor4
-Int[]		_regLookupArmorPlugin4
-Int[]		_regLookupPluginArmor4
-;--End Registry arrays
 
 FormList[]	_regPluginIndex
 FormList[]	_regPluginByRaceIndex
@@ -380,14 +299,14 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 	EndWhile
 	DataVersion += 1
 	
-	If MFXPlugin.dataAddsArmorSlots
+	If MFXPlugin.dataArmorSlotNumbers.Length
 		Int i = 0
-		Debug.Trace("MFX/FXRegistry:  Registering " + MFXPlugin.dataArmorNewSlotNumbers.Length + " ArmorSlots from '" + infoPluginName + "'")
-		While i < MFXPlugin.dataArmorNewSlotNumbers.Length
-			If MFXPlugin.dataArmorNewSlotNames[i]
+		Debug.Trace("MFX/FXRegistry:  Registering " + MFXPlugin.dataArmorSlotNumbers.Length + " ArmorSlots from '" + infoPluginName + "'")
+		While i < MFXPlugin.dataArmorSlotNumbers.Length
+			If MFXPlugin.dataArmorSlotNames[i]
 				iRace = 0
 				While iRace < MFXPlugin.dataRaces.Length
-					Bool SlotResult = RegisterArmorSlot(MFXPlugin, MFXPlugin.dataRaces[iRace], MFXPlugin.dataArmorNewSlotNumbers[i], MFXPlugin.dataArmorNewSlotNames[i])
+					Bool SlotResult = RegisterArmorSlot(MFXPlugin, MFXPlugin.dataRaces[iRace], MFXPlugin.dataArmorSlotNumbers[i], MFXPlugin.dataArmorSlotNames[i])
 					iRace += 1
 				EndWhile
 			EndIf
@@ -504,11 +423,11 @@ Int Function RegisterArmor(vMFX_FXPluginBase MFXPlugin, Race akRace, Armor akArm
 				;Debug.Trace("MFX/FXRegistry: Checking ArmorSlot " + h + " from " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName())
 				Bool bResult = CheckArmorSlot(MFXPlugin,akRace,h)
 				iBipedSlot = GetBipedFromSlotMask(h)
-				If bResult && MFXPlugin.dataArmorNewSlotNumbers.Find(iBipedSlot) >= 0
+				If bResult && MFXPlugin.dataArmorSlotNumbers.Find(iBipedSlot) >= 0
 					;;Debug.Trace("MFXRegistry: Added " + iBipedSlot + ",iSlotCount is " + iSlotCount)
 					iArmorSlots[iSlotCount] = iBipedSlot
 					iSlotCount += 1
-				ElseIf bResult && MFXPlugin.dataArmorSlotsUsed.Find(iBipedSlot) >= 0
+				ElseIf bResult && MFXPlugin.dataArmorSlotNumbers.Find(iBipedSlot) >= 0
 					;Mod lists this slot as being used, just not registered to it.
 				Else
 					Debug.Trace("MFX/FXRegistry: " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName() + ". Slot " + iBipedSlot + " is not registered or listed by plugin.")
@@ -521,8 +440,8 @@ Int Function RegisterArmor(vMFX_FXPluginBase MFXPlugin, Race akRace, Armor akArm
 	EndWhile
 	
 	If NumFailures
-		Debug.Trace("MFX/FXRegistry: WARNING! Armor " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName() + " rejected due to " + NumFailures + " unregistered slot(s)!")
-		Return 0
+		Debug.Trace("MFX/FXRegistry: WARNING! Armor " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName() + " is using " + NumFailures + " unregistered slot(s)!")
+;		Return 0
 	EndIf
 
 	regLinkPluginArmor(MFXPlugin,akArmor)
@@ -550,9 +469,9 @@ Bool Function CheckArmorSlot(vMFX_FXPluginBase MFXPlugin, Race akRace, Int iArmo
 	vMFX_FXPluginBase[] PluginsForSlot = regGetPluginsForSlot(iBipedSlot)
 	
 	If PluginsForSlot.Find(MFXPlugin) >= 0
-		Int iSlotNameIndex = MFXPlugin.dataArmorNewSlotNumbers.Find(iBipedSlot)
-		;Debug.Trace("MFX/FXRegistry: " + MFXPlugin.infoPluginName + " registered slot " + iBipedSlot + " as " + MFXPlugin.dataArmorNewSlotNames[iSlotNameIndex])
-	ElseIf MFXPlugin.dataArmorSlotsUsed.Find(iBipedSlot) > 0 
+		Int iSlotNameIndex = MFXPlugin.dataArmorSlotNumbers.Find(iBipedSlot)
+		;Debug.Trace("MFX/FXRegistry: " + MFXPlugin.infoPluginName + " registered slot " + iBipedSlot + " as " + MFXPlugin.dataArmorSlotNames[iSlotNameIndex])
+	ElseIf MFXPlugin.dataArmorSlotNumbers.Find(iBipedSlot) > 0 
 		; Plugin didn't register the slot but is aware of its use
 		;Debug.Trace("MFX/FXRegistry: " + MFXPlugin.infoPluginName + " is using slot " + iBipedSlot + " without registering it.")
 	Else 
