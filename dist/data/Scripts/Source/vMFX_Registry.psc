@@ -247,6 +247,13 @@ Int Function GetSessionObj(String asPath) Global
 	Return JDB.solveObj(".vMFX.Session." + asPath)
 EndFunction
 
+String Function GetUUID(Bool abFast = True) Global
+	If abFast
+		Return GetUUIDFast()
+	EndIf
+	Return GetUUIDTrue()
+EndFunction
+
 String Function GetUUIDTrue() Global
 	Int[] iBytes = New Int[16]
 	Int i = 0

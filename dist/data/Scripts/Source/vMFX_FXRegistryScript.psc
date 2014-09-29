@@ -183,7 +183,7 @@ Function Initialize(Bool bFirstTime = False)
 	EndIf
 	
 	GotoState("")
-	RegisterForSingleUpdate(10.1)
+	RegisterForSingleUpdate(3.1)
 	Debug.Trace("MFX/FXRegistry: Initialization complete!")
 EndFunction
 
@@ -284,9 +284,20 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 	EndIf
 	_LockedBy = infoESPFile + " - '" + infoPluginName + "'"
 	Debug.Trace("MFX/FXRegistry: Checking for plugin " + infoESPFile + "/" + infoPluginName)
-	If !HasRegKey("Plugins." + infoESPFile + "." + infoPluginName)
+
+	Int jPluginFormMap = GetRegObj("PluginForms")
+	String sUUIDPlugin
+	If !JFormMap.HasKey(jPluginFormMap,MFXPlugin) 
+		sUUIDPlugin = GetUUID()
+		JFormMap.SetStr(jPluginFormMap,MFXPlugin,sUUIDPlugin)
 		SetRegForm("Plugins." + infoESPFile + "." + infoPluginName + ".Form",MFXPlugin)
+		SetRegStr("Plugins." + infoESPFile + "." + infoPluginName + ".UUID",sUUIDPlugin)
+		SetRegStr("Plugins." + infoESPFile + "." + infoPluginName + ".Name",infoPluginName)
+		SetRegStr("Plugins." + infoESPFile + "." + infoPluginName + ".Source",infoESPFile)
+		SetRegForm("Index." + sUUIDPlugin,MFXPlugin)
+		SetRegObj("Plugins." + sUUIDPlugin,GetRegObj("Plugins." + infoESPFile + "." + infoPluginName))
 	EndIf
+
 	Debug.Trace("MFX/FXRegistry:  Plugin added!")
 	
 	Int iRace = 0
@@ -343,8 +354,34 @@ Int Function RegisterRace(vMFX_FXPluginBase MFXPlugin, Race akRace)
 	If StringUtil.Find(sESPFile,".esp") > -1
 		sESPFile = StringUtil.Substring(sESPFile,0,StringUtil.GetLength(sESPFile) - 4)
 	EndIf
-	String KeyName = "Plugins." + sESPFile + "." + MFXPlugin.infoPluginName + ".Races"
+	Int jPluginObj = GetRegObj("Plugins." + sESPFile + "." + MFXPlugin.infoPluginName)
 
+	Int jRaceInfo
+	Int jRaceFormMap = GetRegObj("RaceForms")
+	String sUUIDRace
+	If !JFormMap.HasKey(jRaceFormMap,akRace)
+		sUUIDRace = GetUUID()
+		Debug.Trace("MFX/FXRegistry: Registering new race " + akRace.GetName() + " " + akRace + "...")
+		JFormMap.SetStr(jRaceFormMap,akRace,sUUIDRace)
+		SetRegForm("Races." + sUUIDRace + ".Form",akRace)
+		SetRegObj("Races." + sUUIDRace + ".Plugins",jArray.objectWithSize(1))
+		SetRegObj("Races." + sUUIDRace + ".Plugins[0]",jPluginObj)
+		SetRegForm("Index." + sUUIDRace, akRace)
+		Debug.Trace("MFX/FXRegistry: Registered " + akRace.GetName() + " as " + sUUIDRace + "!")
+	Else ; Race is already registered, link the current plugin if it's missing
+		sUUIDRace = JFormMap.GetStr(jRaceFormMap,akRace)
+		Debug.Trace("MFX/FXRegistry: Race " + akRace.GetName() + " is already registered as " + sUUIDRace + ", linking it to Plugin " + sESPFile + "/" + MFXPlugin.infoPluginName + "...")
+		Int jRacePluginLinks = GetRegObj("Races." + sUUIDRace + ".Plugins")
+		Debug.Trace("MFX/FXRegistry:  " + akRace.GetName() + " has " + JArray.Count(jRacePluginLinks) + " Plugin links.")
+		If JArray.FindObj(jRacePluginLinks,jPluginObj) < 0
+			Debug.Trace("MFX/FXRegistry:  " + akRace.GetName() + " isn't linked to " + sESPFile + "/" + MFXPlugin.infoPluginName + ", adding link at position " + JArray.Count(jRacePluginLinks) + "!")
+			JArray.AddObj(jRacePluginLinks,jPluginObj)
+			SetRegObj("Races." + sUUIDRace + ".Plugins",jRacePluginLinks)
+		EndIf
+	EndIf
+
+	String KeyName = "Plugins." + sESPFile + "." + MFXPlugin.infoPluginName + ".Races"
+	
 	Int jRaceArray = GetRegObj(KeyName)
 	If !jRaceArray
 		jRaceArray = JArray.Object()
@@ -357,8 +394,6 @@ Int Function RegisterRace(vMFX_FXPluginBase MFXPlugin, Race akRace)
 		iResult = JArray.Count(jRaceArray) - 1
 	EndIf
 
-	regLinkPluginRace(MFXPlugin,akRace)
-	
 	Return iResult
 EndFunction
 
@@ -1024,6 +1059,7 @@ Function regLinkPluginRace(vMFX_FXPluginBase MFXPlugin, Race NewRace)
 		Debug.Trace("MFX/FXRegistry: Adding LinkFormMap JFormMap to registry...")
 		jLinkFormMap = JFormMap.Object()
 		SetRegObj("LinkFormMap",jLinkFormMap)
+		String GUID = JValue.evalLuaStr(0, "return vMFX.uuid()")
 	EndIf
 	
 	Int jRaceLinks = JFormMap.GetObj(jLinkFormMap,NewRace)
