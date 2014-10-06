@@ -276,7 +276,7 @@ Function SetRaceFilter(Race akFilterRace)
 EndFunction
 
 Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
-	GoToState("Busy")
+;	GoToState("Busy")
 	String infoPluginName = MFXPlugin.infoPluginName
 	String infoESPFile = MFXPlugin.infoESPFile
 	If StringUtil.Find(infoESPFile,".esp") > -1
@@ -320,13 +320,15 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 		Int i = 0
 		Debug.Trace("MFX/FXRegistry/RegisterPlugin:  Registering " + MFXPlugin.dataArmorSlotNumbers.Length + " ArmorSlots from '" + infoPluginName + "'")
 		While i < MFXPlugin.dataArmorSlotNumbers.Length
-			If MFXPlugin.dataArmorSlotNames[i]
-				iRace = 0
-				While iRace < MFXPlugin.dataRaces.Length
-					Bool SlotResult = RegisterArmorSlot(MFXPlugin, MFXPlugin.dataRaces[iRace], MFXPlugin.dataArmorSlotNumbers[i], MFXPlugin.dataArmorSlotNames[i])
-					iRace += 1
-				EndWhile
+			String sSlotName = ""
+			If i < MFXPlugin.dataArmorSlotNames.Length
+				sSlotName = MFXPlugin.dataArmorSlotNames[i]
 			EndIf
+			iRace = 0
+			While iRace < MFXPlugin.dataRaces.Length
+				Bool SlotResult = RegisterArmorSlot(MFXPlugin, MFXPlugin.dataRaces[iRace], MFXPlugin.dataArmorSlotNumbers[i], sSlotName)
+				iRace += 1
+			EndWhile
 			i += 1
 		EndWhile
 	EndIf
