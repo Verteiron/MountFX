@@ -62,6 +62,8 @@ Int Property infoVersion = 1 Auto
 
 Int Property RegistryID = -1 Auto Hidden
 
+String Property UUID = "" Auto Hidden
+
 ;--=== Variables ===--
 
 Bool 					_Running
