@@ -283,22 +283,28 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 		infoESPFile = StringUtil.Substring(infoESPFile,0,StringUtil.GetLength(infoESPFile) - 4)
 	EndIf
 	_LockedBy = infoESPFile + " - '" + infoPluginName + "'"
-	Debug.Trace("MFX/FXRegistry: Checking for plugin " + infoESPFile + "/" + infoPluginName)
+	Debug.Trace("MFX/FXRegistry/RegisterPlugin: Checking for plugin " + infoESPFile + "/" + infoPluginName)
 
+	String sPluginKey = "Plugins." + infoESPFile + "." + infoPluginName
+	
 	Int jPluginFormMap = GetRegObj("PluginForms")
 	String sUUIDPlugin
 	If !JFormMap.HasKey(jPluginFormMap,MFXPlugin) 
 		sUUIDPlugin = GetUUID()
+		MFXPlugin.UUID = sUUIDPlugin
 		JFormMap.SetStr(jPluginFormMap,MFXPlugin,sUUIDPlugin)
-		SetRegForm("Plugins." + infoESPFile + "." + infoPluginName + ".Form",MFXPlugin)
-		SetRegStr("Plugins." + infoESPFile + "." + infoPluginName + ".UUID",sUUIDPlugin)
-		SetRegStr("Plugins." + infoESPFile + "." + infoPluginName + ".Name",infoPluginName)
-		SetRegStr("Plugins." + infoESPFile + "." + infoPluginName + ".Source",infoESPFile)
+		SetRegForm(sPluginKey + ".Form",MFXPlugin)
+		SetRegStr(sPluginKey + ".UUID",sUUIDPlugin)
+		SetRegStr(sPluginKey + ".Name",infoPluginName)
+		SetRegStr(sPluginKey + ".Source",infoESPFile)
 		SetRegForm("Index." + sUUIDPlugin,MFXPlugin)
 		SetRegObj("Plugins." + sUUIDPlugin,GetRegObj("Plugins." + infoESPFile + "." + infoPluginName))
+	Else
+		sUUIDPlugin = GetRegStr(sPluginKey + ".UUID")
+		MFXPlugin.UUID = sUUIDPlugin
 	EndIf
 
-	Debug.Trace("MFX/FXRegistry:  Plugin added!")
+	Debug.Trace("MFX/FXRegistry/RegisterPlugin:  Plugin added!")
 	
 	Int iRace = 0
 	While iRace < MFXPlugin.dataRaces.Length
@@ -312,7 +318,7 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 	
 	If MFXPlugin.dataArmorSlotNumbers.Length
 		Int i = 0
-		Debug.Trace("MFX/FXRegistry:  Registering " + MFXPlugin.dataArmorSlotNumbers.Length + " ArmorSlots from '" + infoPluginName + "'")
+		Debug.Trace("MFX/FXRegistry/RegisterPlugin:  Registering " + MFXPlugin.dataArmorSlotNumbers.Length + " ArmorSlots from '" + infoPluginName + "'")
 		While i < MFXPlugin.dataArmorSlotNumbers.Length
 			If MFXPlugin.dataArmorSlotNames[i]
 				iRace = 0
@@ -333,7 +339,7 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 	While iRace < MFXPlugin.dataRaces.Length
 		While idFL < MFXPlugin.dataFormLists.Length
 			Int Result = RegisterFXFormList(MFXPlugin, MFXPlugin.dataFormLists[iDFL], MFXPlugin.dataRaces[iRace])
-			Debug.Trace("MFX/FXRegistry: " + MFXPlugin.infoPluginName + " registered " + Result + " forms for " + MFXPlugin.dataRaces[iRace].GetName() + "!")
+			Debug.Trace("MFX/FXRegistry/RegisterPlugin: " + MFXPlugin.infoPluginName + " registered " + Result + " forms for " + MFXPlugin.dataRaces[iRace].GetName() + "!")
 			iDFL += 1
 		EndWhile
 		iRace += 1
@@ -351,49 +357,28 @@ EndFunction
 Int Function RegisterRace(vMFX_FXPluginBase MFXPlugin, Race akRace)
 	String RaceName = akRace.GetName()
 	String sESPFile = MFXPlugin.infoESPFile
+	String sUUIDPlugin = MFXPlugin.UUID
 	If StringUtil.Find(sESPFile,".esp") > -1
 		sESPFile = StringUtil.Substring(sESPFile,0,StringUtil.GetLength(sESPFile) - 4)
 	EndIf
-	Int jPluginObj = GetRegObj("Plugins." + sESPFile + "." + MFXPlugin.infoPluginName)
+	Int jPluginObj = GetRegObj("Plugins." + sUUIDPlugin)
 
-	Int jRaceInfo
-	Int jRaceFormMap = GetRegObj("RaceForms")
 	String sUUIDRace
+	Int jRaceFormMap = GetRegObj("RaceForms")
 	If !JFormMap.HasKey(jRaceFormMap,akRace)
 		sUUIDRace = GetUUID()
-		Debug.Trace("MFX/FXRegistry: Registering new race " + akRace.GetName() + " " + akRace + "...")
 		JFormMap.SetStr(jRaceFormMap,akRace,sUUIDRace)
 		SetRegForm("Races." + sUUIDRace + ".Form",akRace)
-		SetRegObj("Races." + sUUIDRace + ".Plugins",jArray.objectWithSize(1))
-		SetRegObj("Races." + sUUIDRace + ".Plugins[0]",jPluginObj)
-		SetRegForm("Index." + sUUIDRace, akRace)
-		Debug.Trace("MFX/FXRegistry: Registered " + akRace.GetName() + " as " + sUUIDRace + "!")
-	Else ; Race is already registered, link the current plugin if it's missing
+		SetRegStr("Races." + sUUIDRace + ".Name",akRace.GetName())
+	Else
 		sUUIDRace = JFormMap.GetStr(jRaceFormMap,akRace)
-		Debug.Trace("MFX/FXRegistry: Race " + akRace.GetName() + " is already registered as " + sUUIDRace + ", linking it to Plugin " + sESPFile + "/" + MFXPlugin.infoPluginName + "...")
-		Int jRacePluginLinks = GetRegObj("Races." + sUUIDRace + ".Plugins")
-		Debug.Trace("MFX/FXRegistry:  " + akRace.GetName() + " has " + JArray.Count(jRacePluginLinks) + " Plugin links.")
-		If JArray.FindObj(jRacePluginLinks,jPluginObj) < 0
-			Debug.Trace("MFX/FXRegistry:  " + akRace.GetName() + " isn't linked to " + sESPFile + "/" + MFXPlugin.infoPluginName + ", adding link at position " + JArray.Count(jRacePluginLinks) + "!")
-			JArray.AddObj(jRacePluginLinks,jPluginObj)
-			SetRegObj("Races." + sUUIDRace + ".Plugins",jRacePluginLinks)
-		EndIf
 	EndIf
-
-	String KeyName = "Plugins." + sESPFile + "." + MFXPlugin.infoPluginName + ".Races"
 	
-	Int jRaceArray = GetRegObj(KeyName)
-	If !jRaceArray
-		jRaceArray = JArray.Object()
-		SetRegObj(KeyName,jRaceArray)
-	EndIf
+	CreateRegFormLink(MFXPlugin,akRace,"Races","Plugins")
+	CreateRegObjLink(jPluginObj,GetRegObj("Races." + sUUIDRace),"Races","Plugins")
 
-	Int iResult = JArray.FindForm(jRaceArray,akRace)
-	If iResult < 0
-		JArray.AddForm(jRaceArray,akRace)
-		iResult = JArray.Count(jRaceArray) - 1
-	EndIf
-
+	Int iResult = CountFormLinks(MFXPlugin,"Races")
+	
 	Return iResult
 EndFunction
 
@@ -438,7 +423,10 @@ Int Function RegisterSpell(vMFX_FXPluginBase MFXPlugin, Race akRace, Spell akSpe
 EndFunction
 
 Int Function RegisterArmor(vMFX_FXPluginBase MFXPlugin, Race akRace, Armor akArmor)
-	
+	String sUUIDPlugin = MFXPlugin.UUID	
+	If !sUUIDPlugin
+		Debug.Trace("MFX/FXRegistry/RegisterArmor: Plugin " + MFXPlugin + " isn't registered!")
+	EndIf
 	Int NumFailures = 0
 	Int NumAddons = akArmor.GetNumArmorAddons()
 	Int i = 0
@@ -525,28 +513,6 @@ Bool Function CheckArmorSlot(vMFX_FXPluginBase MFXPlugin, Race akRace, Int iArmo
 
 EndFunction
 
-vMFX_FXPluginBase[] Function GetPluginsForSlot(int iBipedSlot)
-	Int i
-	Int iFR
-	Int iResultIndex
-	vMFX_FXPluginBase MFXPlugin
-	vMFX_FXPluginBase[] Result
-	Result = New vMFX_FXPluginBase[128]
-	While i < vMFX_regFXPlugins.GetSize()
-		iFR = vMFX_reg_Slots[iBipedSlot].Find(vMFX_regFXPlugins.GetAt(i))
-		If iFR >= 0
-			Result[iResultIndex] = vMFX_reg_Slots[iBipedSlot].GetAt(iFR) as vMFX_FXPluginBase
-			iResultIndex += 1
-		EndIf
-		i += 1
-	EndWhile
-	Return Result
-EndFunction
-
-FormList Function GetArmorsForRaceSlot(Race akRace, Int iBipedSlot)
-	Formlist ResultList
-EndFunction
-
 Bool Function RegisterArmorSlot(vMFX_FXPluginBase MFXPlugin, Race akRace, Int iBipedSlot, String sSlotName, Bool bOverwrite = False)
 	;Debug.Trace("MFX/FXRegistry: RegisterArmorSlot(" + MFXPlugin + ", " + akRace + ", " + iArmorSlot + ", " + sSlotName + ")")
 	
@@ -555,9 +521,7 @@ Bool Function RegisterArmorSlot(vMFX_FXPluginBase MFXPlugin, Race akRace, Int iB
 
 	If !JValue.IsMap(GetRegObj("Slots." + iBipedSlot))
 		Debug.Trace("MFX/FXRegistry/RegisterArmorSlot: Creating slot " + iBipedSlot + " from " + MFXPlugin.infoPluginName)
-		SetRegObj("Slots." + iBipedSlot + ".Plugins",JArray.Object())
-		SetRegObj("Slots." + iBipedSlot + ".Races",JArray.Object())
-		SetRegObj("Slots." + iBipedSlot + ".Armors",JArray.Object())
+		SetRegInt("Slots." + iBipedSlot + ".BipedSlot",iBipedSlot)
 		SetRegObj("Slots." + iBipedSlot + ".Names",JArray.Object())
 	EndIf
 	
@@ -569,22 +533,13 @@ Bool Function RegisterArmorSlot(vMFX_FXPluginBase MFXPlugin, Race akRace, Int iB
 	EndIf
 
 	Int jSlotNames = GetRegObj("Slots." + iBipedSlot + ".Names")
-	Int jSlotRaces = GetRegObj("Slots." + iBipedSlot + ".Races")
-	Int jSlotPlugins = GetRegObj("Slots." + iBipedSlot + ".Plugins")
-	Int jSlotArmors = GetRegObj("Slots." + iBipedSlot + ".Armors")
 	
 	If !bFail
 		If sSlotName && JArray.FindStr(jSlotNames,sSlotName) < 0
 			JArray.AddStr(jSlotNames,sSlotName)
 		EndIf
-		If akRace && JArray.FindForm(jSlotRaces,akRace) < 0
-			JArray.Addform(jSlotRaces,akRace)
-		EndIf
-		If MFXPlugin && JArray.FindForm(jSlotPlugins,MFXPlugin) < 0
-			JArray.Addform(jSlotPlugins,MFXPlugin)
-		EndIf
-		regLinkPluginSlot(MFXPlugin,iBipedSlot)
-		regLinkRaceSlot(akRace,iBipedSlot)
+		CreateRegForm2ObjLink(MFXPlugin,jSlot,"Slots","Plugins")
+		CreateRegForm2ObjLink(akRace,jSlot,"Slots","Races")
 		Debug.Trace("MFX/FXRegistry: Registered ArmorSlot " + sSlotName + "(" + iBipedSlot + ")")
 	EndIf
 		
@@ -611,68 +566,68 @@ Function SpinLock(String sFunctionName,String sRequestorName)
 	Debug.Trace("MFX/FXRegistry: " + sFunctionName + " unlocked after " + (GetCurrentRealTime() - StartTime) + "s. Processing request from " + sRequestorName)
 EndFunction
 
-String Function GetSlotNameForRace(Race akRace, int iArmorSlot)
-	Debug.Trace("MFX/FXRegistry: GetSlotNameForRace(" + akRace + "," + iArmorSlot + ")")
-	Int i = 0
-	Int iRace = _RaceIndex.Find(akRace)
-	Debug.Trace("MFX/FXRegistry:  iRace: " + iRace)
-	While i >= 0 && i < _SlotRaceIndex.Length
-		i = _SlotRaceIndex.Find(iRace,i)
-		Debug.Trace("MFX/FXRegistry:   Race search returned i: " + i)
-		If i >= 0 && _SlotArmorSlotIndex[i] == iArmorSlot
-			Debug.Trace("MFX/FXRegistry:   ArmorSlot matched at i: " + i)
-			Debug.Trace("MFX/FXRegistry:   _SlotArmorSlotNameIndex[i]: " + _SlotArmorSlotNameIndex[i])
-			Return _SlotArmorSlotNameIndex[i]
-		ElseIf i >= 0
-			i += 1
-		EndIf
-	EndWhile
-	Debug.Trace("MFX/FXRegistry:  Nothing found!")
-	Return ""
-EndFunction
+;String Function GetSlotNameForRace(Race akRace, int iArmorSlot)
+;	Debug.Trace("MFX/FXRegistry: GetSlotNameForRace(" + akRace + "," + iArmorSlot + ")")
+;	Int i = 0
+;	Int iRace = _RaceIndex.Find(akRace)
+;	Debug.Trace("MFX/FXRegistry:  iRace: " + iRace)
+;	While i >= 0 && i < _SlotRaceIndex.Length
+;		i = _SlotRaceIndex.Find(iRace,i)
+;		Debug.Trace("MFX/FXRegistry:   Race search returned i: " + i)
+;		If i >= 0 && _SlotArmorSlotIndex[i] == iArmorSlot
+;			Debug.Trace("MFX/FXRegistry:   ArmorSlot matched at i: " + i)
+;			Debug.Trace("MFX/FXRegistry:   _SlotArmorSlotNameIndex[i]: " + _SlotArmorSlotNameIndex[i])
+;			Return _SlotArmorSlotNameIndex[i]
+;		ElseIf i >= 0
+;			i += 1
+;		EndIf
+;	EndWhile
+;	Debug.Trace("MFX/FXRegistry:  Nothing found!")
+;	Return ""
+;EndFunction
 
-String Function GetPluginForSlot(Race akRace, int iArmorSlot)
-	Debug.Trace("MFX/FXRegistry: GetPluginForSlot(" + akRace + "," + iArmorSlot + ")")
-	Int i = 0
-	Int iRace = _RaceIndex.Find(akRace)
-	Debug.Trace("MFX/FXRegistry:  iRace: " + iRace)
-	While i >= 0 && i < _SlotRaceIndex.Length
-		i = _SlotRaceIndex.Find(iRace,i)
-		Debug.Trace("MFX/FXRegistry:   Race search returned i: " + i)
-		If i >= 0 && _SlotArmorSlotIndex[i] == iArmorSlot
-			Debug.Trace("MFX/FXRegistry:   ArmorSlot matched at i: " + i)
-			Debug.Trace("MFX/FXRegistry:   _SlotPluginIndex[i]: " + _SlotPluginIndex[i])
-			Debug.Trace("MFX/FXRegistry:   _PluginNameIndex[_SlotPluginIndex[i]]: " + _PluginNameIndex[_SlotPluginIndex[i]])
-			Return _PluginNameIndex[_SlotPluginIndex[i]]
-		ElseIf i >= 0
-			i += 1
-		EndIf
-	EndWhile
-	Debug.Trace("MFX/FXRegistry:  Nothing found!")
-	Return ""
-EndFunction
+;String Function GetPluginForSlot(Race akRace, int iArmorSlot)
+;	Debug.Trace("MFX/FXRegistry: GetPluginForSlot(" + akRace + "," + iArmorSlot + ")")
+;	Int i = 0
+;	Int iRace = _RaceIndex.Find(akRace)
+;	Debug.Trace("MFX/FXRegistry:  iRace: " + iRace)
+;	While i >= 0 && i < _SlotRaceIndex.Length
+;		i = _SlotRaceIndex.Find(iRace,i)
+;		Debug.Trace("MFX/FXRegistry:   Race search returned i: " + i)
+;		If i >= 0 && _SlotArmorSlotIndex[i] == iArmorSlot
+;			Debug.Trace("MFX/FXRegistry:   ArmorSlot matched at i: " + i)
+;			Debug.Trace("MFX/FXRegistry:   _SlotPluginIndex[i]: " + _SlotPluginIndex[i])
+;			Debug.Trace("MFX/FXRegistry:   _PluginNameIndex[_SlotPluginIndex[i]]: " + _PluginNameIndex[_SlotPluginIndex[i]])
+;			Return _PluginNameIndex[_SlotPluginIndex[i]]
+;		ElseIf i >= 0
+;			i += 1
+;		EndIf
+;	EndWhile
+;	Debug.Trace("MFX/FXRegistry:  Nothing found!")
+;	Return ""
+;EndFunction
 
-vMFX_FXPluginBase Function GetPluginForArmor(Armor akArmor)
-	Debug.Trace("MFX/FXRegistry: GetPluginForArmor(" + akArmor + ")")
-	Int i = 0
-	Int j = 0
-	Int iFI
-	vMFX_FXPluginBase MFXPlugin
-	While i < vMFX_regFXPlugins.GetSize()
-		MFXPlugin = vMFX_regFXPlugins.GetAt(i) as vMFX_FXPluginBase
-		j = 0
-		While j < MFXPlugin.dataFormlists.Length
-			If MFXPlugin.dataFormlists[j].HasForm(akArmor)
-				Debug.Trace("MFX/FXRegistry:  Returning " + MFXPlugin.infoPluginName)
-				Return MFXPlugin
-			EndIf
-			j += 1
-		EndWhile
-		i += 1
-	EndWhile
-	Debug.Trace("MFX/FXRegistry:  Nothing found!")
-	Return None
-EndFunction
+;vMFX_FXPluginBase Function GetPluginForArmor(Armor akArmor)
+;	Debug.Trace("MFX/FXRegistry: GetPluginForArmor(" + akArmor + ")")
+;	Int i = 0
+;	Int j = 0
+;	Int iFI
+;	vMFX_FXPluginBase MFXPlugin
+;	While i < vMFX_regFXPlugins.GetSize()
+;		MFXPlugin = vMFX_regFXPlugins.GetAt(i) as vMFX_FXPluginBase
+;		j = 0
+;		While j < MFXPlugin.dataFormlists.Length
+;			If MFXPlugin.dataFormlists[j].HasForm(akArmor)
+;				Debug.Trace("MFX/FXRegistry:  Returning " + MFXPlugin.infoPluginName)
+;				Return MFXPlugin
+;			EndIf
+;			j += 1
+;		EndWhile
+;		i += 1
+;	EndWhile
+;	Debug.Trace("MFX/FXRegistry:  Nothing found!")
+;	Return None
+;EndFunction
 
 Int Function FindFreeIndexForm(Form[] aiArray)
 	
@@ -732,7 +687,7 @@ Int Function AddArmorToOutfit(Int iBipedSlot, Armor NewArmor)
 	_OutfitCurrent[iBipedSlot] = NewArmor
 	If iBipedSlot == 30
 		vMFX_FXPluginBase OwningPlugin
-		OwningPlugin = GetPluginForArmor(NewArmor)
+		OwningPlugin = regGetPluginForArmor(NewArmor)
 		If OwningPlugin.dataChangesBody
 			IncompatibleMesh = True
 			DisabledSlots = OwningPlugin.dataUnsupportedSlot
@@ -1054,280 +1009,32 @@ EndFunction
 
 Function regLinkPluginRace(vMFX_FXPluginBase MFXPlugin, Race NewRace)
 	;Create a link between Plugin and Race
-	Int jLinkFormMap = GetRegObj("LinkFormMap")
-	If !jLinkFormMap
-		Debug.Trace("MFX/FXRegistry: Adding LinkFormMap JFormMap to registry...")
-		jLinkFormMap = JFormMap.Object()
-		SetRegObj("LinkFormMap",jLinkFormMap)
-		String GUID = JValue.evalLuaStr(0, "return vMFX.uuid()")
-	EndIf
-	
-	Int jRaceLinks = JFormMap.GetObj(jLinkFormMap,NewRace)
-	Int jPluginLinks = JFormMap.GetObj(jLinkFormMap,MFXPlugin)
-
-	If !jRaceLinks
-		Debug.Trace("MFX/FXRegistry: Adding RaceLinks JMap to " + NewRace + "...")
-		jRaceLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,NewRace,jRaceLinks)
-	EndIf
-
-	If !jPluginLinks
-		Debug.Trace("MFX/FXRegistry: Adding PluginLinks JMap to " + MFXPlugin + "...")
-		jPluginLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,MFXPlugin,jPluginLinks)
-	EndIf
-
-	Int jRacePluginList = JMap.GetObj(jRaceLinks,"Plugins")
-	If !jRacePluginList
-		Debug.Trace("MFX/FXRegistry: Adding RacePluginList JArray to RaceLinks...")
-		jRacePluginList = JArray.Object()
-		JMap.SetObj(jRaceLinks,"Plugins",jRacePluginList)
-	EndIf
-	
-	Int jPluginRaceList = JMap.GetObj(jPluginLinks,"Races")
-	If !jPluginRaceList
-		Debug.Trace("MFX/FXRegistry: Adding PluginRaceList JArray to PluginLinks...")
-		jPluginRaceList = JArray.Object()
-		JMap.SetObj(jPluginLinks,"Races",jPluginRaceList)
-	EndIf
-	
-	If JArray.FindForm(jRacePluginList,MFXPlugin) < 0
-		JArray.AddForm(jRacePluginList,MFXPlugin)
-	EndIf
-	If JArray.FindForm(jPluginRaceList,NewRace) < 0
-		JArray.AddForm(jPluginRaceList,NewRace)
-	EndIf
-
+	CreateRegFormLink(MFXPlugin,NewRace,"Races","Plugins")
 EndFunction
 
 Function regLinkPluginArmor(vMFX_FXPluginBase MFXPlugin, Armor NewArmor)
 	;Create a link between Plugin and Armor
-	Int jLinkFormMap = GetRegObj("LinkFormMap")
-	If !jLinkFormMap
-		Debug.Trace("MFX/FXRegistry: Adding LinkFormMap JFormMap to registry...")
-		jLinkFormMap = JFormMap.Object()
-		SetRegObj("LinkFormMap",jLinkFormMap)
-	EndIf
-	
-	Int jArmorLinks = JFormMap.GetObj(jLinkFormMap,NewArmor)
-	Int jPluginLinks = JFormMap.GetObj(jLinkFormMap,MFXPlugin)
-
-	If !jArmorLinks
-		Debug.Trace("MFX/FXRegistry: Adding ArmorLinks JMap to " + NewArmor + "...")
-		jArmorLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,NewArmor,jArmorLinks)
-	EndIf
-
-	If !jPluginLinks
-		Debug.Trace("MFX/FXRegistry: Adding PluginLinks JMap to " + MFXPlugin + "...")
-		jPluginLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,MFXPlugin,jPluginLinks)
-	EndIf
-
-	Int jArmorPluginList = JMap.GetObj(jArmorLinks,"Plugins")
-	If !jArmorPluginList
-		Debug.Trace("MFX/FXRegistry: Adding ArmorPluginList JArray to ArmorLinks...")
-		jArmorPluginList = JArray.Object()
-		JMap.SetObj(jArmorLinks,"Plugins",jArmorPluginList)
-	EndIf
-	
-	Int jPluginArmorList = JMap.GetObj(jPluginLinks,"Armors")
-	If !jPluginArmorList
-		Debug.Trace("MFX/FXRegistry: Adding PluginArmorList JArray to PluginLinks...")
-		jPluginArmorList = JArray.Object()
-		JMap.SetObj(jPluginLinks,"Armors",jPluginArmorList)
-	EndIf
-	
-	If JArray.FindForm(jArmorPluginList,MFXPlugin) < 0
-		JArray.AddForm(jArmorPluginList,MFXPlugin)
-	EndIf
-	If JArray.FindForm(jPluginArmorList,NewArmor) < 0
-		JArray.AddForm(jPluginArmorList,NewArmor)
-	EndIf
+	CreateRegFormLink(MFXPlugin,NewArmor,"Armors","Plugins")
 EndFunction
 
 Function regLinkPluginSlot(vMFX_FXPluginBase MFXPlugin, Int iBipedSlot)
 	;Create a link between Plugin and BipedSlot
-	Int jLinkFormMap = GetRegObj("LinkFormMap")
-	If !jLinkFormMap
-		Debug.Trace("MFX/FXRegistry: Adding LinkFormMap JFormMap to registry...")
-		jLinkFormMap = JFormMap.Object()
-		SetRegObj("LinkFormMap",jLinkFormMap)
-	EndIf
-	
-	Int jSlotLinks = GetRegObj("Slots." + iBipedSlot)
-	Int jPluginLinks = JFormMap.GetObj(jLinkFormMap,MFXPlugin)
-
-	If !jSlotLinks
-		Debug.Trace("MFX/FXRegistry: Adding SlotLinks JMap to " + iBipedSlot + "...")
-		jSlotLinks = JMap.Object()
-		SetRegObj("Slots." + iBipedSlot,jSlotLinks)
-	EndIf
-
-	If !jPluginLinks
-		Debug.Trace("MFX/FXRegistry: Adding PluginLinks JMap to " + MFXPlugin + "...")
-		jPluginLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,MFXPlugin,jPluginLinks)
-	EndIf
-
-	Int jSlotPluginList = JMap.GetObj(jSlotLinks,"Plugins")
-	If !jSlotPluginList
-		Debug.Trace("MFX/FXRegistry: Adding SlotPluginList JArray to SlotLinks...")
-		jSlotPluginList = JArray.Object()
-		JMap.SetObj(jSlotLinks,"Plugins",jSlotPluginList)
-	EndIf
-	
-	Int jPluginSlotList = JMap.GetObj(jPluginLinks,"Slots")
-	If !jPluginSlotList
-		Debug.Trace("MFX/FXRegistry: Adding PluginSlotList JArray to PluginLinks...")
-		jPluginSlotList = JArray.Object()
-		JMap.SetObj(jPluginLinks,"Slots",jPluginSlotList)
-	EndIf
-	
-	If JArray.FindForm(jSlotPluginList,MFXPlugin) < 0
-		JArray.AddForm(jSlotPluginList,MFXPlugin)
-	EndIf
-	If JArray.FindInt(jPluginSlotList,iBipedSlot) < 0
-		JArray.AddInt(jPluginSlotList,iBipedSlot)
-	EndIf
+	CreateRegForm2ObjLink(MFXPlugin,GetRegObj("Slots." + iBipedSlot),"Slots","Plugins")
 EndFunction
 
 Function regLinkArmorSlot(Armor NewArmor, Int iBipedSlot)
 	;Create a link between Armor and BipedSlot
-	Int jLinkFormMap = GetRegObj("LinkFormMap")
-	If !jLinkFormMap
-		Debug.Trace("MFX/FXRegistry: Adding LinkFormMap JFormMap to registry...")
-		jLinkFormMap = JFormMap.Object()
-		SetRegObj("LinkFormMap",jLinkFormMap)
-	EndIf
-	
-	Int jSlotLinks = GetRegObj("Slots." + iBipedSlot)
-	Int jArmorLinks = JFormMap.GetObj(jLinkFormMap,NewArmor)
-
-	If !jSlotLinks
-		Debug.Trace("MFX/FXRegistry: Adding SlotLinks JMap to " + iBipedSlot + "...")
-		jSlotLinks = JMap.Object()
-		SetRegObj("Slots." + iBipedSlot,jSlotLinks)
-	EndIf
-
-	If !jArmorLinks
-		Debug.Trace("MFX/FXRegistry: Adding ArmorLinks JMap to " + NewArmor + "...")
-		jArmorLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,NewArmor,jArmorLinks)
-	EndIf
-
-	Int jSlotArmorList = JMap.GetObj(jSlotLinks,"Armors")
-	If !jSlotArmorList
-		Debug.Trace("MFX/FXRegistry: Adding SlotArmorList JArray to SlotLinks...")
-		jSlotArmorList = JArray.Object()
-		JMap.SetObj(jSlotLinks,"Armors",jSlotArmorList)
-	EndIf
-	
-	Int jArmorSlotList = JMap.GetObj(jArmorLinks,"Slots")
-	If !jArmorSlotList
-		Debug.Trace("MFX/FXRegistry: Adding ArmorSlotList JArray to ArmorLinks...")
-		jArmorSlotList = JArray.Object()
-		JMap.SetObj(jArmorLinks,"Slots",jArmorSlotList)
-	EndIf
-	
-	If JArray.FindForm(jSlotArmorList,NewArmor) < 0
-		JArray.AddForm(jSlotArmorList,NewArmor)
-	EndIf
-	If JArray.FindInt(jArmorSlotList,iBipedSlot) < 0
-		JArray.AddInt(jArmorSlotList,iBipedSlot)
-	EndIf
+	CreateRegForm2ObjLink(NewArmor,GetRegObj("Slots." + iBipedSlot),"Slots","Armors")
 EndFunction
 
 Function regLinkArmorRace(Armor NewArmor, Race NewRace)
 	;Create a link between Armor and Race
-	Int jLinkFormMap = GetRegObj("LinkFormMap")
-	If !jLinkFormMap
-		Debug.Trace("MFX/FXRegistry: Adding LinkFormMap JFormMap to registry...")
-		jLinkFormMap = JFormMap.Object()
-		SetRegObj("LinkFormMap",jLinkFormMap)
-	EndIf
-	
-	Int jArmorLinks = JFormMap.GetObj(jLinkFormMap,NewArmor)
-	Int jRaceLinks = JFormMap.GetObj(jLinkFormMap,NewRace)
-
-	If !jArmorLinks
-		Debug.Trace("MFX/FXRegistry: Adding ArmorLinks JMap to " + NewArmor + "...")
-		jArmorLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,NewArmor,jArmorLinks)
-	EndIf
-
-	If !jRaceLinks
-		Debug.Trace("MFX/FXRegistry: Adding RaceLinks JMap to " + NewRace + "...")
-		jRaceLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,NewRace,jRaceLinks)
-	EndIf
-
-	Int jArmorRaceList = JMap.GetObj(jArmorLinks,"Races")
-	If !jArmorRaceList
-		Debug.Trace("MFX/FXRegistry: Adding ArmorRaceList JArray to ArmorLinks...")
-		jArmorRaceList = JArray.Object()
-		JMap.SetObj(jArmorLinks,"Races",jArmorRaceList)
-	EndIf
-	
-	Int jRaceArmorList = JMap.GetObj(jRaceLinks,"Armors")
-	If !jRaceArmorList
-		Debug.Trace("MFX/FXRegistry: Adding RaceArmorList JArray to RaceLinks...")
-		jRaceArmorList = JArray.Object()
-		JMap.SetObj(jRaceLinks,"Armors",jRaceArmorList)
-	EndIf
-	
-	If JArray.FindForm(jArmorRaceList,NewRace) < 0
-		JArray.AddForm(jArmorRaceList,NewRace)
-	EndIf
-	If JArray.FindForm(jRaceArmorList,NewArmor) < 0
-		JArray.AddForm(jRaceArmorList,NewArmor)
-	EndIf
+	CreateRegFormLink(NewArmor,NewRace,"Races","Armors")
 EndFunction
 
 Function regLinkRaceSlot(Race NewRace,Int iBipedSlot)
 	;Create a link between Race and BipedSlot
-	Int jLinkFormMap = GetRegObj("LinkFormMap")
-	If !jLinkFormMap
-		Debug.Trace("MFX/FXRegistry: Adding LinkFormMap JFormMap to registry...")
-		jLinkFormMap = JFormMap.Object()
-		SetRegObj("LinkFormMap",jLinkFormMap)
-	EndIf
-	
-	Int jSlotLinks = GetRegObj("Slots." + iBipedSlot)
-	Int jRaceLinks = JFormMap.GetObj(jLinkFormMap,NewRace)
-
-	If !jSlotLinks
-		Debug.Trace("MFX/FXRegistry: Adding SlotLinks JMap to " + iBipedSlot + "...")
-		jSlotLinks = JMap.Object()
-		SetRegObj("Slots." + iBipedSlot,jSlotLinks)
-	EndIf
-
-	If !jRaceLinks
-		Debug.Trace("MFX/FXRegistry: Adding RaceLinks JMap to " + NewRace + "...")
-		jRaceLinks = JMap.Object()
-		JFormMap.SetObj(jLinkFormMap,NewRace,jRaceLinks)
-	EndIf
-
-	Int jSlotRaceList = JMap.GetObj(jSlotLinks,"Races")
-	If !jSlotRaceList
-		Debug.Trace("MFX/FXRegistry: Adding SlotRaceList JArray to SlotLinks...")
-		jSlotRaceList = JArray.Object()
-		JMap.SetObj(jSlotLinks,"Races",jSlotRaceList)
-	EndIf
-	
-	Int jRaceSlotList = JMap.GetObj(jRaceLinks,"Slots")
-	If !jRaceSlotList
-		Debug.Trace("MFX/FXRegistry: Adding RaceSlotList JArray to RaceLinks...")
-		jRaceSlotList = JArray.Object()
-		JMap.SetObj(jRaceLinks,"Slots",jRaceSlotList)
-	EndIf
-	
-	If JArray.FindForm(jSlotRaceList,NewRace) < 0
-		JArray.AddForm(jSlotRaceList,NewRace)
-	EndIf
-	If JArray.FindInt(jRaceSlotList,iBipedSlot) < 0
-		JArray.AddInt(jRaceSlotList,iBipedSlot)
-	EndIf
+	CreateRegForm2ObjLink(NewRace,GetRegObj("Slots." + iBipedSlot),"Slots","Races")	
 EndFunction
 
 Race[] Function regGetRacesForSlot(Int iBipedSlot)
@@ -1357,7 +1064,7 @@ vMFX_FXPluginBase[] Function regGetPluginsForSlot(Int iBipedSlot)
 	Int iCount = 0
 	Int jPluginsForSlot = GetRegObj("Slots." + iBipedSlot + ".Plugins")
 	Int iMax = JArray.Count(jPluginsForSlot)
-	Debug.Trace("MFXRegistry: Plugins for slot " + iBipedSlot + ": " + iMax)
+	;Debug.Trace("MFXRegistry: Plugins for slot " + iBipedSlot + ": " + iMax)
 	While i < iMax
 		kPlugin = JArray.GetForm(jPluginsForSlot,i) as vMFX_FXPluginBase
 		If kPlugin
@@ -1376,7 +1083,7 @@ vMFX_FXPluginBase[] Function regGetPluginsForRace(Race akRace)
 	vMFX_FXPluginBase kPlugin 
 	Int i = 0
 	Int iCount = 0
-	Int jPluginsForRace = JMap.GetObj(JFormMap.GetObj(GetRegObj("LinkFormMap"),akRace),"Plugins")
+	Int jPluginsForRace = GetFormLinkArray(akRace,"Plugins")
 	Int iMax = JArray.Count(jPluginsForRace)
 	While i < iMax
 		kPlugin = JArray.GetForm(jPluginsForRace,i) as vMFX_FXPluginBase
@@ -1395,7 +1102,7 @@ vMFX_FXPluginBase Function regGetPluginForArmor(Armor akArmor)
 	vMFX_FXPluginBase kPlugin
 	Int i = 0
 	Int iCount = 0
-	Int jPluginsForRace = JMap.GetObj(JFormMap.GetObj(GetRegObj("LinkFormMap"),akArmor),"Plugins")
+	Int jPluginsForRace = GetFormLinkArray(akArmor,"Plugins")
 	Int iMax = JArray.Count(jPluginsForRace)
 	While i < iMax
 		kPlugin = JArray.GetForm(jPluginsForRace,i) as vMFX_FXPluginBase
@@ -1410,12 +1117,12 @@ vMFX_FXPluginBase Function regGetPluginForArmor(Armor akArmor)
 EndFunction
 
 Race[] Function regGetRacesForPlugin(vMFX_FXPluginBase MFXPlugin)
-	;;Debug.Trace("MFXRegistry: Getting races for plugin " + MFXPlugin.infoPluginName)
+	;Debug.Trace("MFXRegistry: Getting races for plugin " + MFXPlugin.infoPluginName)
 	Race[] Races = New Race[128]
 	Race kRace 
 	Int i = 0
 	Int iCount = 0
-	Int jRacesForPlugin = JMap.GetObj(JFormMap.GetObj(GetRegObj("LinkFormMap"),MFXPlugin),"Races")
+	Int jRacesForPlugin = GetFormLinkArray(MFXPlugin,"Races")
 	Int iMax = JArray.Count(jRacesForPlugin)
 	While i < iCount
 		kRace = JArray.GetForm(jRacesForPlugin,i) as Race
@@ -1435,7 +1142,7 @@ Armor[] Function regGetArmorsForPlugin(vMFX_FXPluginBase MFXPlugin)
 	Armor kArmor 
 	Int i = 0
 	Int iCount = 0
-	Int jArmorsForPlugin = JMap.GetObj(JFormMap.GetObj(GetRegObj("LinkFormMap"),MFXPlugin),"Armors")
+	Int jArmorsForPlugin = GetFormLinkArray(MFXPlugin,"Armors")
 	Int iMax = JArray.Count(jArmorsForPlugin)
 	While i < iMax
 		kArmor = JArray.GetForm(jArmorsForPlugin,i) as Armor
@@ -1455,7 +1162,7 @@ Armor[] Function regGetArmorsForRace(Race MFXRace)
 	Armor kArmor 
 	Int i = 0
 	Int iCount = 0
-	Int jArmorsForPlugin = JMap.GetObj(JFormMap.GetObj(GetRegObj("LinkFormMap"),MFXRace),"Armors")
+	Int jArmorsForPlugin = GetFormLinkArray(MFXRace,"Armors")
 	Int iMax = JArray.Count(jArmorsForPlugin)
 	While i < iCount
 		kArmor = JArray.GetForm(jArmorsForPlugin,i) as Armor
@@ -1495,10 +1202,10 @@ Int[] Function regGetSlotsForPlugin(vMFX_FXPluginBase MFXPlugin)
 	Int iSlot 
 	Int i = 0
 	Int iCount = 0
-	Int jSlotsForPlugin = JMap.GetObj(JFormMap.GetObj(GetRegObj("LinkFormMap"),MFXPlugin),"Slots")
+	Int jSlotsForPlugin = GetFormLinkArray(MFXPlugin,"Slots")
 	Int iMax = JArray.Count(jSlotsForPlugin)
 	While i < iCount
-		iSlot = JArray.GetInt(jSlotsForPlugin,i)
+		iSlot = JMap.GetInt(JArray.GetObj(jSlotsForPlugin,i),"BipedSlot")
 		If iSlot
 			Slots[iCount] = iSlot
 			iCount += 1
@@ -1515,17 +1222,16 @@ Int[] Function regGetSlotsForRace(Race akRace)
 	Int iSlot 
 	Int i = 0
 	Int iCount = 0
-	Int jSlotsForRace = JMap.GetObj(JFormMap.GetObj(GetRegObj("LinkFormMap"),akRace),"Slots")
+	Int jSlotsForRace = GetFormLinkArray(akRace,"Slots")
 	Int iMax = JArray.Count(jSlotsForRace)
 	While i < iMax
-		iSlot = JArray.GetInt(jSlotsForRace,i)
+		iSlot = JMap.GetInt(JArray.GetObj(jSlotsForRace,i),"BipedSlot")
 		If iSlot
 			Slots[iCount] = iSlot
 			iCount += 1
 		EndIf
 		i += 1
 	EndWhile
-	
 	Return Slots
 EndFunction
 
