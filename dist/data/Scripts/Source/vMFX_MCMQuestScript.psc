@@ -190,9 +190,6 @@ Event OnPageReset(string a_page)
 		Int i = 0
 		While i < _MFXRegistry.vMFX_regSortPluginsByRace.GetSize()
 			MFXPlugin = _MFXRegistry.vMFX_regSortPluginsByRace.GetAt(i) as vMFX_FXPluginBase
-			If !MFXPlugin.dataAddsArmorSlots
-			
-			EndIf
 			i += 1
 		EndWhile
 	ElseIf a_page == Pages[3] ; Plugin management
