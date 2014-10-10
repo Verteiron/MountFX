@@ -16,6 +16,8 @@ ReferenceAlias Property CurrentMount Auto
 ;--=== Events ===--
 
 Event OnInit()
-	Debug.Trace("vMFXSMHorseTrackerMountAliasScript : OnInit!")
-	SendModEvent("vMFX_MFXSetCurrentMount")
+	If IsRunning()
+		Debug.Trace("vMFXSMHorseTrackerMountAliasScript : OnInit!")
+		SendModEvent("vMFX_MFXSetCurrentMount")
+	EndIf
 EndEvent

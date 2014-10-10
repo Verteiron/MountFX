@@ -1,5 +1,5 @@
 Scriptname vMFX_SMHorseTrackerScript extends Quest  
-{SM starts this when player activates a Horse}
+{StoryManager starts this when player activates a Horse}
 
 ;--=== Imports ===--
 
