@@ -39,8 +39,10 @@ String[] Property SlotNames Hidden
 		While i < 64
 			Int iN = 0
 			Int jNames = GetRegObj("Slots." + i + ".Names")
+			sReturn[i] = JArray.GetStr(jNames,iN)
+			iN += 1
 			While iN < JArray.Count(jNames)
-				sReturn[i] = sReturn[i] + JArray.GetStr(jNames,iN) + "/"
+				sReturn[i] = sReturn[i] + "/" + JArray.GetStr(jNames,iN)
 				iN += 1
 			EndWhile
 			i += 1
