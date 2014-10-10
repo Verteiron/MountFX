@@ -285,29 +285,40 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 		infoESPFile = StringUtil.Substring(infoESPFile,0,StringUtil.GetLength(infoESPFile) - 4)
 	EndIf
 	_LockedBy = infoESPFile + " - '" + infoPluginName + "'"
-	Debug.Trace("MFX/FXRegistry/RegisterPlugin: Checking for plugin " + infoESPFile + "/" + infoPluginName)
+	;Debug.Trace("MFX/FXRegistry/RegisterPlugin: Checking for plugin " + infoESPFile + "/" + infoPluginName)
 
 	String sPluginKey = "Plugins." + infoESPFile + "." + infoPluginName
 	
 	Int jPluginFormMap = GetRegObj("PluginForms")
 	String sUUIDPlugin
 	If !JFormMap.HasKey(jPluginFormMap,MFXPlugin) 
+		Debug.Trace("MFX/FXRegistry/RegisterPlugin: Generating UUID for new plugin " + infoESPFile + "/" + infoPluginName)
 		sUUIDPlugin = GetUUID()
 		MFXPlugin.UUID = sUUIDPlugin
 		JFormMap.SetStr(jPluginFormMap,MFXPlugin,sUUIDPlugin)
-		SetRegForm(sPluginKey + ".Form",MFXPlugin)
-		SetRegStr(sPluginKey + ".UUID",sUUIDPlugin)
-		SetRegStr(sPluginKey + ".Name",infoPluginName)
-		SetRegStr(sPluginKey + ".Source",infoESPFile)
 		SetRegForm("Index." + sUUIDPlugin,MFXPlugin)
 		SetRegObj("Plugins." + sUUIDPlugin,GetRegObj("Plugins." + infoESPFile + "." + infoPluginName))
+		Debug.Trace("MFX/FXRegistry/RegisterPlugin: " + infoESPFile + "/" + infoPluginName + " UUID set to " + sUUIDPlugin)
 	Else
 		sUUIDPlugin = GetRegStr(sPluginKey + ".UUID")
 		MFXPlugin.UUID = sUUIDPlugin
 	EndIf
 
-	Debug.Trace("MFX/FXRegistry/RegisterPlugin:  Plugin added!")
-	
+	If MFXPlugin.infoVersion != GetRegInt("Plugins." + sUUIDPlugin + ".Version")
+		SetRegForm(sPluginKey + ".Form",MFXPlugin)
+		SetRegStr(sPluginKey + ".UUID",sUUIDPlugin)
+		SetRegStr(sPluginKey + ".Name",infoPluginName)
+		SetRegStr(sPluginKey + ".Source",infoESPFile)
+		SetRegInt(sPluginKey + ".Priority",MFXPlugin.infoPriority)
+		SetRegInt(sPluginKey + ".Version",MFXPlugin.infoVersion)
+		SetRegObj(sPluginKey + ".IncompatibleSlots",JArray.objectWithInts(MFXPlugin.dataUnsupportedSlot))
+		Debug.Trace("MFX/FXRegistry/RegisterPlugin: " + infoESPFile + "/" + infoPluginName + " registered version " + MFXPlugin.infoVersion)
+	Else
+		;Debug.Trace("MFX/FXRegistry/RegisterPlugin:  Plugin already loaded!")
+		GoToState("")
+		Return 1
+	EndIf
+		
 	Int iRace = 0
 	While iRace < MFXPlugin.dataRaces.Length
 		Race newRace = MFXPlugin.dataRaces[iRace]
@@ -457,7 +468,7 @@ Int Function RegisterArmor(vMFX_FXPluginBase MFXPlugin, Race akRace, Armor akArm
 				ElseIf bResult && MFXPlugin.dataArmorSlotNumbers.Find(iBipedSlot) >= 0
 					;Mod lists this slot as being used, just not registered to it.
 				Else
-					Debug.Trace("MFX/FXRegistry: " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName() + ". Slot " + iBipedSlot + " is not registered or listed by plugin.")
+					Debug.Trace("MFX/FXRegistry: " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName() + ". Slot " + iBipedSlot + " is not registered or listed by plugin.",1)
 					NumFailures += 1
 				EndIf
 			endIf
@@ -504,12 +515,12 @@ Bool Function CheckArmorSlot(vMFX_FXPluginBase MFXPlugin, Race akRace, Int iArmo
 	Else 
 		; plugin hasn't registered for this slot and doesn't think it's using it.
 		bFail = True
-		bFailReason = MFXPlugin.infoPluginName + " does not know it's using slot " + iBipedSlot + "!!"
+		bFailReason = MFXPlugin.infoPluginName + " does not know it's using slot " + iBipedSlot + "!"
 	EndIf
 	
 	If bFail
 		;GotoState("")
-		Debug.Trace("MFX/FXRegistry: ArmorSlot check FAILED - " + bFailReason)
+		;Debug.Trace("MFX/FXRegistry: ArmorSlot check: " + bFailReason)
 		Return False
 	EndIf
 	;GotoState("")
