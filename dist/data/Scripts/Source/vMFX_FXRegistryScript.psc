@@ -312,6 +312,8 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 		SetRegInt(sPluginKey + ".Priority",MFXPlugin.infoPriority)
 		SetRegInt(sPluginKey + ".Version",MFXPlugin.infoVersion)
 		SetRegObj(sPluginKey + ".IncompatibleSlots",JArray.objectWithInts(MFXPlugin.dataUnsupportedSlot))
+		SetRegObj(sPluginKey + ".RequiredArmors",JArray.Object())
+		JArray.addFromFormList(GetRegObj(sPluginKey + ".RequiredArmors"),MFXPlugin.dataRequiredArmorList)
 		Debug.Trace("MFX/FXRegistry/RegisterPlugin: " + infoESPFile + "/" + infoPluginName + " registered version " + MFXPlugin.infoVersion)
 	Else
 		;Debug.Trace("MFX/FXRegistry/RegisterPlugin:  Plugin already loaded!")
@@ -493,6 +495,13 @@ Int Function RegisterArmor(vMFX_FXPluginBase MFXPlugin, Race akRace, Armor akArm
 	EndWhile
 	If MFXPlugin.dataRequiredArmorList != None
 		vMFX_regArmorsWithReqs.AddForm(akArmor)
+		i = 0
+		While i < MFXPlugin.dataRequiredArmorList.GetSize()
+			Form kRequiredArmor = MFXPlugin.dataRequiredArmorList.GetAt(i)
+			CreateRegFormLink(akArmor,kRequiredArmor,"RequiredArmors","ArmorsEnabled")
+			CreateRegFormLink(MFXPlugin,kRequiredArmor,"RequiredArmors","PluginsEnabled")
+			i += 1
+		EndWhile
 	EndIf
 	DataVersion += 1
 	Return iSlotCount
