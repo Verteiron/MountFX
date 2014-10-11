@@ -708,22 +708,38 @@ Function InitArray(Int[] aiArray)
 	EndWhile
 EndFunction
 
-Int Function AddArmorToOutfit(Int iBipedSlot, Armor NewArmor)
+Int Function AddArmorToOutfit(Int iBipedSlot, Armor NewArmor, String asOutfitName = "Default")
 	_OutfitCurrent[iBipedSlot] = NewArmor
+	;If !HasRegKey("Outfits." + asOutfitName + ".Slots")
+		
+	SetRegForm("Outfits." + asOutfitName + ".Slot" + iBipedSlot,NewArmor)
+	
 	If iBipedSlot == 30
 		vMFX_FXPluginBase OwningPlugin
 		OwningPlugin = regGetPluginForArmor(NewArmor)
 		If OwningPlugin.dataChangesBody
+			If !HasRegKey("Outfits." + asOutfitName + ".DisabledSlots")
+				SetRegObj("Outfits." + asOutfitName + ".DisabledSlots",JArray.objectWithInts(OwningPlugin.dataUnsupportedSlot))
+			Else
+				Int jDisabledSlots = GetRegObj("Outfits." + asOutfitName + ".DisabledSlots")
+				Int jNewDisabledSlots = JArray.objectWithInts(OwningPlugin.dataUnsupportedSlot)
+				JArray.addFromArray(jDisabledSlots, jNewDisabledSlots)
+			EndIf
 			IncompatibleMesh = True
 			DisabledSlots = OwningPlugin.dataUnsupportedSlot
 			DisablingArmor = NewArmor
 			DisablingPlugin = OwningPlugin
-			Return DisabledSlots.Length
 		Else
+			SetRegObj("Outfits." + asOutfitName + ".DisabledSlots",0)
 			IncompatibleMesh = False
 			DisabledSlots = New Int[32]
 			DisablingArmor = None
 			DisablingPlugin = None
+		EndIf
+		If DisabledSlots.Length
+			Return DisabledSlots.Length
+		Else
+			Return -1
 		EndIf
 	EndIf
 	Return 0

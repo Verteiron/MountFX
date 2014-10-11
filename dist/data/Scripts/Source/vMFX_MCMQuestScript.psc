@@ -1,5 +1,11 @@
 Scriptname vMFX_MCMQuestScript extends SKI_ConfigBase  
 
+;--=== Imports ===--
+
+Import Utility
+Import Game
+Import vMFX_Registry
+
 Quest Property vMFX_MetaQuest Auto
 Quest Property vMFX_FXRegistryQuest Auto
 
@@ -17,6 +23,8 @@ Actor 	PlayerMount
 
 Race	HorseRace
 Race	CurrentRace
+
+String	CurrentOutfit = "Default"
 
 Form[] 	_CurrentOutfit
 String[]	_CurrentOutfitStrings ; 'cause GetText is slow
@@ -121,7 +129,7 @@ Event OnGameReload()
 EndEvent
 
 Event OnMFXUpdateMCM(String eventName, String strArg, Float numArg, Form sender)
-	Debug.Trace("vMFXMCM: Received update event!")
+	Debug.Trace("MFX/MCM: Received update event!")
 	UpdateOptions()
 EndEvent
 
@@ -148,37 +156,34 @@ Event OnPageReset(string a_page)
 			Return
 		EndIf
 		SetCursorFillMode(TOP_TO_BOTTOM)
-		;_MFXRegistry.RaceFilter = None
-		;UpdateOptions()
-		_MFXRegistry.RaceFilter = HorseRace
-		;CurrentRace = None
-		UpdateOptions()
-		_CurrentOutfit = _MFXRegistry.GetOutfit(PlayerMount)
-		_CurrentOutfitStrings = New String[128]
-		Int i = 30
-		While i < _CurrentOutfit.Length
-			If _CurrentOutfit[i]
-				_CurrentOutfitStrings[i] = _CurrentOutfit[i].GetName()
-			Else
-				_CurrentOutfitStrings[i] = "None/Not set"
-			EndIf
-			i += 1
-		EndWhile
-		i = 0
-		AddHeaderOption(HorseRace.GetName())
+		CurrentRace = HorseRace
+		;Int jOutfit = GetRegObj("Outfits." + CurrentOutfit)
+		_CurrentOutfitStrings = New String[64]
+		AddHeaderOption(CurrentRace.GetName())
 		Int iOptionFlags 
-		While i < sSlotNames.Length
-			If sSlotNames[i] != ""
+		Int iBipedSlot = 30
+		While iBipedSlot < 64
+			If JArray.FindForm(GetRegObj("Slots." + iBipedSlot + ".Races"),CurrentRace) >= 0
 				iOptionFlags = OPTION_FLAG_NONE
-				If _IncompatibleMesh
-					If _MFXRegistry.DisabledSlots.Find(i) >= 0
-						iOptionFlags = OPTION_FLAG_DISABLED
-					EndIf
+				Bool bDisplayOption = True
+				If JArray.FindInt(GetRegObj("Outfits." + CurrentOutfit + ".DisabledSlots"),iBipedSlot) >= 0
+					iOptionFlags = OPTION_FLAG_DISABLED
+					bDisplayOption = False
 				EndIf
-				_SkinOptions[i] = AddMenuOption(sSlotNames[i],_CurrentOutfitStrings[i],iOptionFlags)
-				Debug.Trace("vMFXMCM: Added " + _SkinOptions[i] + " with ID " + i)
+				Form kFormForSlot = GetRegForm("Outfits." + CurrentOutfit + ".Slot" + iBipedSlot)
+				If kFormForSlot
+					_CurrentOutfitStrings[iBipedSlot] = kFormForSlot.GetName()
+				Else
+					_CurrentOutfitStrings[iBipedSlot] = "None/Not set"
+				EndIf
+				If bDisplayOption
+					_SkinOptions[iBipedSlot] = AddMenuOption(_MFXRegistry.SlotNames[iBipedSlot],_CurrentOutfitStrings[iBipedSlot],iOptionFlags)
+					Debug.Trace("MFX/MCM: Added " + _SkinOptions[iBipedSlot] + " with ID " + iBipedSlot)
+				Else
+					Debug.Trace("MFX/MCM: Skipped " + _SkinOptions[iBipedSlot])
+				EndIf
 			EndIf
-			i += 1
+			iBipedSlot += 1
 		EndWhile
 	ElseIf a_page == Pages[1] ; Spells and other EffectShader
 		If !PlayerMount
@@ -204,10 +209,10 @@ Event OnPageReset(string a_page)
 EndEvent
 
 Event OnOptionMenuOpen(Int Option)
-	Debug.Trace("vMFXMCM: OnOptionMenuOpen(" + Option + ")")
+	Debug.Trace("MFX/MCM: OnOptionMenuOpen(" + Option + ")")
 	vMFX_FXPluginBase MFXPlugin
 	Int iSlotNum = _SkinOptions.Find(Option)
-	Debug.Trace("vMFXMCM: Slot number is " + iSlotNum)
+	Debug.Trace("MFX/MCM: Slot number is " + iSlotNum)
 	SetMenuDialogOptions(GetSlotOptions(iSlotNum))
 	Int iIndex = GetSlotOptions(iSlotNum).Find(_CurrentOutfitStrings[iSlotNum])
 	SetMenuDialogStartIndex(iIndex)
@@ -215,20 +220,16 @@ Event OnOptionMenuOpen(Int Option)
 EndEvent
 
 Event OnOptionMenuAccept(int option, int index)
-	Debug.Trace("vMFXMCM: OnOptionMenuAccept(" + Option + "," + index + ")")
+	Debug.Trace("MFX/MCM: OnOptionMenuAccept(" + Option + "," + index + ")")
 	If index >= 0
 		Int iSlotNum = _SkinOptions.Find(Option)
-		Debug.Trace("vMFXMCM: User picked " + GetSlotOptions(iSlotNum)[index] + ", which is Armor " + GetSlotArmors(iSlotNum)[index])
+		Debug.Trace("MFX/MCM: User picked " + GetSlotOptions(iSlotNum)[index] + ", which is Armor " + GetSlotArmors(iSlotNum)[index])
 		SetMenuOptionValue(option, GetSlotOptions(iSlotNum)[index])
 		Int Result = _MFXRegistry.AddArmorToOutfit(iSlotNum,GetSlotArmors(iSlotNum)[index])
-		If Result > 0
+		If Result != 0
 			;_DisabledSlots = _MFXRegistry.DisabledSlots
-			_IncompatibleMesh = True
 			DataVersion = 0
-			ForcePageReset()
-		ElseIf _IncompatibleMesh != _MFXRegistry.IncompatibleMesh
-			_IncompatibleMesh = False
-			DataVersion = 0
+			Debug.Trace("MFX/MCM: MFXRegistry reports change in allowed slots, forcing page reset...")
 			ForcePageReset()
 		EndIf
 	EndIf
@@ -248,7 +249,7 @@ function ApplySettings()
 EndFunction
 
 Function UpdateOptions()
-	Debug.Trace("vMFXMCM: Our DataVersion is " + DataVersion + ", MFXRegistry.DataVersion is " + _MFXRegistry.DataVersion)
+	Debug.Trace("MFX/MCM: Our DataVersion is " + DataVersion + ", MFXRegistry.DataVersion is " + _MFXRegistry.DataVersion)
 	Float StartTime = Utility.GetCurrentRealTime()
 	If DataVersion == _MFXRegistry.DataVersion && CurrentRace == _MFXRegistry.RaceFilter
 		Return
@@ -266,13 +267,13 @@ Function UpdateOptions()
 	Int i = 0
 	Int j = 0
 	Int[] SlotsForRace = _MFXRegistry.regGetSlotsForRace(CurrentRace)
-	Debug.Trace("vMFXMCM: Found " + SlotsForRace.Find(0) + " slots for this race!")
+	Debug.Trace("MFX/MCM: Found " + SlotsForRace.Find(0) + " slots for this race!")
 	iBipedSlot = 30
 	While iBipedSlot < 62
 		If SlotsForRace.Find(iBipedSlot) >= 0
 			ArmorsforSlot = New Armor[128]
 			kArmors = New Armor[128]
-			Debug.Trace("vMFXMCM:  Loading armor for BipedSlot " + iBipedSlot + "...")
+			Debug.Trace("MFX/MCM:  Loading armor for BipedSlot " + iBipedSlot + "...")
 			sSlotNames[iBipedSlot] = _MFXRegistry.SlotNames[iBipedSlot]
 			sArmorNames = New String[128]
 			ArmorsforSlot = _MFXRegistry.regGetArmorsForSlot(iBipedSlot)
@@ -297,7 +298,7 @@ Function UpdateOptions()
 	EndWhile
 
 	DataVersion = _MFXRegistry.DataVersion
-	Debug.Trace("vMFXMCM: Updated MCM lists in " + (Utility.GetCurrentRealTime() - StartTime) + "s.")
+	Debug.Trace("MFX/MCM: Updated MCM lists in " + (Utility.GetCurrentRealTime() - StartTime) + "s.")
 EndFunction
 
 Function SetSlotOptions(Int Index, String[] SlotOptions)
