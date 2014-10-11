@@ -175,15 +175,21 @@ Event OnMFXRegistryReady(String eventName, String strArg, Float numArg, Form sen
 		WaitMenuMode(1)
 		Timer += 1
 	EndWhile
-	RegistryID = NewFXRegistry.RegisterPlugin(self)
+	Timer = 0
+	While RegistryID < 0 && Timer < 50
+		RegistryID = NewFXRegistry.RegisterPlugin(self)
+		WaitMenuMode(0.25)
+		Timer += 1
+	EndWhile
 
 	; Success
-	if (RegistryID >= 0)
+	If (RegistryID >= 0)
 		_MFXRegistry = NewFXRegistry
 		;Debug.Trace("MFXP/" + infoESPFile + "/" + infoPluginName + ": Registered as ID " + RegistryID + "!")
 		SendModEvent("vMFX_MFXPluginMessage","ready")
-;		RegisterForSingleUpdate(0.1)
-	endIf
+	Else
+		SendModEvent("vMFX_MFXPluginMessage","failedregistration")
+	EndIf
 EndEvent
 
 ;--=== Functions ===--

@@ -278,7 +278,7 @@ Function SetRaceFilter(Race akFilterRace)
 EndFunction
 
 Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
-;	GoToState("Busy")
+	GoToState("Busy")
 	String infoPluginName = MFXPlugin.infoPluginName
 	String infoESPFile = MFXPlugin.infoESPFile
 	If StringUtil.Find(infoESPFile,".esp") > -1
@@ -296,6 +296,7 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 		sUUIDPlugin = GetUUID()
 		MFXPlugin.UUID = sUUIDPlugin
 		JFormMap.SetStr(jPluginFormMap,MFXPlugin,sUUIDPlugin)
+		SetRegForm(sPluginKey + ".Form",MFXPlugin)
 		SetRegForm("Index." + sUUIDPlugin,MFXPlugin)
 		SetRegObj("Plugins." + sUUIDPlugin,GetRegObj("Plugins." + infoESPFile + "." + infoPluginName))
 		Debug.Trace("MFX/FXRegistry/RegisterPlugin: " + infoESPFile + "/" + infoPluginName + " UUID set to " + sUUIDPlugin)
@@ -305,7 +306,6 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 	EndIf
 
 	If MFXPlugin.infoVersion != GetRegInt("Plugins." + sUUIDPlugin + ".Version")
-		SetRegForm(sPluginKey + ".Form",MFXPlugin)
 		SetRegStr(sPluginKey + ".UUID",sUUIDPlugin)
 		SetRegStr(sPluginKey + ".Name",infoPluginName)
 		SetRegStr(sPluginKey + ".Source",infoESPFile)
@@ -315,6 +315,7 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 		Debug.Trace("MFX/FXRegistry/RegisterPlugin: " + infoESPFile + "/" + infoPluginName + " registered version " + MFXPlugin.infoVersion)
 	Else
 		;Debug.Trace("MFX/FXRegistry/RegisterPlugin:  Plugin already loaded!")
+		_LockedBy = ""	
 		GoToState("")
 		Return 1
 	EndIf
@@ -810,9 +811,10 @@ EndFunction
 
 State Busy
 	Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
-		SpinLock("RegisterPlugin",MFXPlugin.infoESPFile + " - " + MFXPlugin.infoPluginName)
-		WaitMenuMode(MFXPlugin.infoPriority * 0.1)
-		Return RegisterPlugin(MFXPlugin)
+		;SpinLock("RegisterPlugin",MFXPlugin.infoESPFile + " - " + MFXPlugin.infoPluginName)
+		;WaitMenuMode(MFXPlugin.infoPriority * 0.1)
+		;Return RegisterPlugin(MFXPlugin)
+		Return -1
 	EndFunction
 EndState
 
