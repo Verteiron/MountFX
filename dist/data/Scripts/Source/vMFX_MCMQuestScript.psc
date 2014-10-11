@@ -156,6 +156,7 @@ Event OnPageReset(string a_page)
 			Return
 		EndIf
 		SetCursorFillMode(TOP_TO_BOTTOM)
+		_SkinOptions = New Int[128]
 		CurrentRace = HorseRace
 		;Int jOutfit = GetRegObj("Outfits." + CurrentOutfit)
 		_CurrentOutfitStrings = New String[64]
@@ -166,11 +167,11 @@ Event OnPageReset(string a_page)
 			If JArray.FindForm(GetRegObj("Slots." + iBipedSlot + ".Races"),CurrentRace) >= 0
 				iOptionFlags = OPTION_FLAG_NONE
 				Bool bDisplayOption = True
-				If JArray.FindInt(GetRegObj("Outfits." + CurrentOutfit + ".DisabledSlots"),iBipedSlot) >= 0
+				If !GetSlotArmors(iBipedSlot)[1] && !GetSlotArmors(iBipedSlot)[2] ; JArray.FindInt(GetRegObj("Outfits." + CurrentOutfit + ".DisabledSlots"),iBipedSlot) >= 0 
 					iOptionFlags = OPTION_FLAG_DISABLED
 					bDisplayOption = False
 				EndIf
-				Form kFormForSlot = GetRegForm("Outfits." + CurrentOutfit + ".Slot" + iBipedSlot)
+				Form kFormForSlot = GetRegForm("Outfits." + CurrentOutfit + ".Slots[" + iBipedSlot + "]")
 				If kFormForSlot
 					_CurrentOutfitStrings[iBipedSlot] = kFormForSlot.GetName()
 				Else
@@ -230,6 +231,7 @@ Event OnOptionMenuAccept(int option, int index)
 			;_DisabledSlots = _MFXRegistry.DisabledSlots
 			DataVersion = 0
 			Debug.Trace("MFX/MCM: MFXRegistry reports change in allowed slots, forcing page reset...")
+			UpdateOptions()
 			ForcePageReset()
 		EndIf
 	EndIf
@@ -276,7 +278,8 @@ Function UpdateOptions()
 			Debug.Trace("MFX/MCM:  Loading armor for BipedSlot " + iBipedSlot + "...")
 			sSlotNames[iBipedSlot] = _MFXRegistry.SlotNames[iBipedSlot]
 			sArmorNames = New String[128]
-			ArmorsforSlot = _MFXRegistry.regGetArmorsForSlot(iBipedSlot)
+			;ArmorsforSlot = _MFXRegistry.regGetArmorsForSlot(iBipedSlot)
+			ArmorsForSlot = _MFXRegistry.GetOutfitSlotArmor(iBipedSlot)
 			i = 0
 			kArmors[0] = None
 			sArmorNames[0] = "None/Not set"

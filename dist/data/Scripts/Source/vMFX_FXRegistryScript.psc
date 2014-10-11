@@ -185,7 +185,7 @@ Function Initialize(Bool bFirstTime = False)
 	EndIf
 	
 	GotoState("")
-	RegisterForSingleUpdate(3.1)
+	RegisterForSingleUpdate(0.1)
 	Debug.Trace("MFX/FXRegistry: Initialization complete!")
 EndFunction
 
@@ -709,11 +709,37 @@ Function InitArray(Int[] aiArray)
 EndFunction
 
 Int Function AddArmorToOutfit(Int iBipedSlot, Armor NewArmor, String asOutfitName = "Default")
+	Armor kOldArmor = _OutfitCurrent[iBipedSlot] as Armor
 	_OutfitCurrent[iBipedSlot] = NewArmor
-	;If !HasRegKey("Outfits." + asOutfitName + ".Slots")
-		
-	SetRegForm("Outfits." + asOutfitName + ".Slot" + iBipedSlot,NewArmor)
+	If !HasRegKey("Outfits." + asOutfitName + ".Slots")
+		SetRegObj("Outfits." + asOutfitName + ".Slots",JArray.ObjectWithSize(64))
+	EndIf
+	;Int jOutfit = GetRegObj("Outfits." + asOutfitName + ".Slots")
+	;JArray.SetForm(jOutfit,iBipedSlot,NewArmor)
+	If !HasRegKey("Outfits." + asOutfitName + ".EnabledArmor")
+		SetRegObj("Outfits." + asOutfitName + ".EnabledArmor",JArray.object())
+	EndIf
+	Int jEnabledArmor = GetRegObj("Outfits." + asOutfitName + ".EnabledArmor")
 	
+	;Remove enabled armors attached to the outgoing armor
+	If JArray.Count(GetFormLinkArray(kOldArmor,"ArmorsEnabled"))
+		Int jArmorsToRemove = GetFormLinkArray(kOldArmor,"ArmorsEnabled")
+		Int i = JArray.Count(jArmorsToRemove)
+		While i > 0
+			i -= 1
+			Int idx = JArray.FindForm(jEnabledArmor,JArray.GetForm(jArmorsToRemove,i))
+			If idx >= 0
+				JArray.eraseIndex(jEnabledArmor,idx)
+			EndIf
+		EndWhile
+	EndIf
+	
+	;Add enabled armors attached to the incoming armor
+	If JArray.Count(GetFormLinkArray(NewArmor,"ArmorsEnabled"))
+		JArray.AddFromArray(jEnabledArmor,GetFormLinkArray(NewArmor,"ArmorsEnabled"))
+	EndIf
+
+	SetRegForm("Outfits." + asOutfitName + ".Slots[" + iBipedSlot + "]",NewArmor)
 	If iBipedSlot == 30
 		vMFX_FXPluginBase OwningPlugin
 		OwningPlugin = regGetPluginForArmor(NewArmor)
@@ -753,6 +779,52 @@ Form[] Function GetOutfit(Actor PlayerMount = None)
 		PlayerMount = CurrentMount
 	EndIf
 	Return _OutfitCurrent
+EndFunction
+
+Armor[] Function GetOutfitSlotArmor(Int aiBipedSlot, String asOutfitName = "Default")
+	Armor[] sReturnArmor = New Armor[128]
+	Armor[] kArmorsForSlot = regGetArmorsForSlot(aiBipedSlot)
+	Int jOutfit = GetRegObj("Outfits." + asOutfitName + ".Slots")
+	Int i = 0
+	Int iCount = 0
+	Int jEnabledArmor = GetRegObj("Outfits." + asOutfitName + ".EnabledArmor")	
+	
+	While i < kArmorsForSlot.Length
+		Armor kArmor = kArmorsForSlot[i]
+		Bool bAddArmor = True
+		If kArmor
+			Int jRequiredArmors = GetFormLinkArray(kArmor,"RequiredArmors")
+			;Don't add if this slot has been disabled 
+			If JArray.FindInt(GetRegObj("Outfits." + asOutfitName + ".DisabledSlots"),aiBipedSlot) >= 0
+				bAddArmor = False
+			EndIf
+			
+			;Don't add if this armor has unmet requirements
+			If jRequiredArmors && bAddArmor ;Skip this if we're already disabled
+				bAddArmor = False
+				Int iReqListCount = JArray.Count(jRequiredArmors)
+				While iReqListCount > 0
+					iReqListCount -= 1
+					If JArray.FindForm(jOutfit,JArray.GetForm(jRequiredArmors,iReqListCount)) >= 0
+						bAddArmor = True
+					EndIf
+				EndWhile
+			EndIf
+			
+			;DO add if this armor is specifically enabled by another part of the outfit, even if it was previously disabled
+			If JArray.FindForm(jEnabledArmor,kArmor) >= 0
+				bAddArmor = True
+			EndIf
+			
+			If bAddArmor
+				sReturnArmor[iCount] = kArmor
+				Debug.Trace("MFX/FXRegistry: SlotArmor[" + iCount + "] is " + sReturnArmor[iCount])
+				iCount += 1
+			EndIf
+		EndIf
+		i += 1
+	EndWhile
+	Return sReturnArmor
 EndFunction
 
 Function UpdateCurrentMount(Actor akMount)
