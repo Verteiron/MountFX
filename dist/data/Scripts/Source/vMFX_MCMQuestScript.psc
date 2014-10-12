@@ -130,6 +130,7 @@ EndEvent
 
 Event OnMFXUpdateMCM(String eventName, String strArg, Float numArg, Form sender)
 	Debug.Trace("MFX/MCM: Received update event!")
+	_MFXRegistry.UpdateOutfitFilters()
 	UpdateOptions()
 EndEvent
 
@@ -142,7 +143,7 @@ EndEvent
 ;EndState
 
 Event OnConfigOpen()
-
+	;_MFXRegistry.UpdateOutfitFilters()
 EndEvent
 
 Event OnPageReset(string a_page)
@@ -260,7 +261,7 @@ Function UpdateOptions()
 	Int iBipedSlot
 	String sSlotName
 	
-	Armor[] ArmorsforSlot = New Armor[128]
+	Int jArmorsforSlot
 	Armor kArmor
 	int skIndex = 0
 	String[] sArmorNames
@@ -271,21 +272,22 @@ Function UpdateOptions()
 	Int[] SlotsForRace = _MFXRegistry.regGetSlotsForRace(CurrentRace)
 	Debug.Trace("MFX/MCM: Found " + SlotsForRace.Find(0) + " slots for this race!")
 	iBipedSlot = 30
+	Debug.Trace("MFX/MCM:  Loading armor for Outfit " + CurrentOutfit + "...")
 	While iBipedSlot < 62
 		If SlotsForRace.Find(iBipedSlot) >= 0
-			ArmorsforSlot = New Armor[128]
 			kArmors = New Armor[128]
 			Debug.Trace("MFX/MCM:  Loading armor for BipedSlot " + iBipedSlot + "...")
 			sSlotNames[iBipedSlot] = _MFXRegistry.SlotNames[iBipedSlot]
 			sArmorNames = New String[128]
 			;ArmorsforSlot = _MFXRegistry.regGetArmorsForSlot(iBipedSlot)
-			ArmorsForSlot = _MFXRegistry.GetOutfitSlotArmor(iBipedSlot)
+			jArmorsForSlot = GetRegObj("Outfits." + CurrentOutfit + ".FilteredList." + iBipedSlot + ".Forms")
+			Debug.Trace("MFX/MCM:  Found " + JArray.Count(jArmorsForSlot) + " armors for BipedSlot " + iBipedSlot + "!")
 			i = 0
 			kArmors[0] = None
 			sArmorNames[0] = "None/Not set"
 			skIndex = 1
 			While i < kArmors.Length
-				kArmor = ArmorsforSlot[i]
+				kArmor = JArray.GetForm(jArmorsForSlot,i) as Armor
 				If kArmor
 					kArmors[skIndex] = kArmor
 					sArmorNames[skIndex] = kArmor.GetName()

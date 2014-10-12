@@ -709,10 +709,12 @@ Function InitArray(Int[] aiArray)
 EndFunction
 
 Int Function AddArmorToOutfit(Int iBipedSlot, Armor NewArmor, String asOutfitName = "Default")
+	Bool bCompatibilityChanged = False
 	Armor kOldArmor = _OutfitCurrent[iBipedSlot] as Armor
 	_OutfitCurrent[iBipedSlot] = NewArmor
 	If !HasRegKey("Outfits." + asOutfitName + ".Slots")
 		SetRegObj("Outfits." + asOutfitName + ".Slots",JArray.ObjectWithSize(64))
+		SetRegInt("Outfits." + asOutfitName + ".Version", 1)
 	EndIf
 	;Int jOutfit = GetRegObj("Outfits." + asOutfitName + ".Slots")
 	;JArray.SetForm(jOutfit,iBipedSlot,NewArmor)
@@ -730,6 +732,7 @@ Int Function AddArmorToOutfit(Int iBipedSlot, Armor NewArmor, String asOutfitNam
 			Int idx = JArray.FindForm(jEnabledArmor,JArray.GetForm(jArmorsToRemove,i))
 			If idx >= 0
 				JArray.eraseIndex(jEnabledArmor,idx)
+				bCompatibilityChanged = True
 			EndIf
 		EndWhile
 	EndIf
@@ -737,13 +740,18 @@ Int Function AddArmorToOutfit(Int iBipedSlot, Armor NewArmor, String asOutfitNam
 	;Add enabled armors attached to the incoming armor
 	If JArray.Count(GetFormLinkArray(NewArmor,"ArmorsEnabled"))
 		JArray.AddFromArray(jEnabledArmor,GetFormLinkArray(NewArmor,"ArmorsEnabled"))
+		bCompatibilityChanged = True
 	EndIf
 
 	SetRegForm("Outfits." + asOutfitName + ".Slots[" + iBipedSlot + "]",NewArmor)
-	If iBipedSlot == 30
+
+	;Update disabled slots if this plugin changes the body type
+	If iBipedSlot == 30 
 		vMFX_FXPluginBase OwningPlugin
 		OwningPlugin = regGetPluginForArmor(NewArmor)
 		If OwningPlugin.dataChangesBody
+			bCompatibilityChanged = True
+			Debug.Trace("MFX/FXRegistry/AddArmorToOutfit: Owning plugin is slot 30 and changes Body!")
 			If !HasRegKey("Outfits." + asOutfitName + ".DisabledSlots")
 				SetRegObj("Outfits." + asOutfitName + ".DisabledSlots",JArray.objectWithInts(OwningPlugin.dataUnsupportedSlot))
 			Else
@@ -756,18 +764,42 @@ Int Function AddArmorToOutfit(Int iBipedSlot, Armor NewArmor, String asOutfitNam
 			DisablingArmor = NewArmor
 			DisablingPlugin = OwningPlugin
 		Else
-			SetRegObj("Outfits." + asOutfitName + ".DisabledSlots",0)
+			Debug.Trace("MFX/FXRegistry/AddArmorToOutfit: Owning plugin is slot 30 but doesn't change Body!")
+			SetRegObj("Outfits." + asOutfitName + ".DisabledSlots",JArray.object())
 			IncompatibleMesh = False
 			DisabledSlots = New Int[32]
 			DisablingArmor = None
 			DisablingPlugin = None
-		EndIf
-		If DisabledSlots.Length
-			Return DisabledSlots.Length
-		Else
-			Return -1
+			If kOldArmor
+				If regGetPluginForArmor(kOldArmor).dataChangesBody
+					bCompatibilityChanged = True
+				EndIf
+			EndIf
 		EndIf
 	EndIf
+
+	;Unequip armor that was disabled by the change
+	If bCompatibilityChanged
+		SetRegInt("Outfits." + asOutfitName + ".Version", GetRegInt("Outfits." + asOutfitName + ".Version") + 1)
+		UpdateOutfitFilters(asOutfitName)
+		Int jOutfitSlots = GetRegObj("Outfits." + asOutfitName + ".Slots")
+		Int iSlotToCheck = 0
+		While iSlotToCheck < JArray.Count(jOutfitSlots)
+			Armor kArmor = JArray.GetForm(jOutfitSlots,iSlotToCheck) as Armor
+			If kArmor
+				If !OutfitAllowsSlotWithArmor(asOutfitName,iSlotToCheck,kArmor)
+					Debug.Trace("MFX/FXRegistry/AddArmorToOutfit: Removing incompatible armor " + kArmor.GetName() + " " + kArmor + "!")
+					_OutfitCurrent[iSlotToCheck] = None
+				EndIf
+			EndIf
+			iSlotToCheck += 1
+		EndWhile
+	EndIf
+
+	If bCompatibilityChanged
+		Return -1
+	EndIf	
+
 	Return 0
 EndFunction
 
@@ -781,8 +813,48 @@ Form[] Function GetOutfit(Actor PlayerMount = None)
 	Return _OutfitCurrent
 EndFunction
 
-Armor[] Function GetOutfitSlotArmor(Int aiBipedSlot, String asOutfitName = "Default")
-	Armor[] sReturnArmor = New Armor[128]
+Function UpdateOutfitFilters(String asOutfitName = "Default",Bool abForce = False)
+	Int iFilterVersion = GetRegInt("Outfits." + asOutfitName + ".FilteredList.Version")
+	Int iOutfitVersion = GetRegInt("Outfits." + asOutfitName + ".Version")
+	If (iFilterVersion && (iFilterVersion == iOutfitVersion)) && !abForce
+		Return
+	EndIf
+	Int iBipedSlot = 30
+	While iBipedSlot < 62
+		SetRegObj("Outfits." + asOutfitName + ".FilteredList." + iBipedSlot + ".Forms",GetAllowedArmorForSlotJ(iBipedSlot,asOutfitName))
+		iBipedSlot += 1
+	EndWhile
+	SetRegInt("Outfits." + asOutfitName + ".FilteredList.Version",iOutfitVersion)
+EndFunction
+
+Bool Function OutfitAllowsSlotWithArmor(String asOutfitName = "Default", Int aiBipedSlot, Armor akArmor)
+	If JArray.FindForm(GetRegObj("Outfits." + asOutfitName + ".FilteredList." + aiBipedSlot + ".Forms"),akArmor) >= 0
+		Return True
+	EndIf
+	Return False
+EndFunction
+
+Armor[] Function GetAllowedArmorForSlot(Int aiBipedSlot, String asOutfitName = "Default")
+	Armor[] kReturnArmor = New Armor[128]
+	
+	Int jArmorForSlot = GetAllowedArmorForSlotJ(aiBipedSlot, asOutfitName)
+	
+	Int i = 0
+	Int iCount = 0
+	
+	While i < JArray.Count(jArmorForSlot)
+		Armor kArmor = JArray.GetForm(jArmorForSlot,i) as Armor
+		If kArmor
+			kReturnArmor[iCount] = kArmor
+			iCount += 1
+		EndIf
+		i += 1
+	EndWhile
+	Return kReturnArmor
+EndFunction
+
+Int Function GetAllowedArmorForSlotJ(Int aiBipedSlot, String asOutfitName = "Default")
+	Int jArmorList = JArray.Object()
 	Armor[] kArmorsForSlot = regGetArmorsForSlot(aiBipedSlot)
 	Int jOutfit = GetRegObj("Outfits." + asOutfitName + ".Slots")
 	Int i = 0
@@ -817,14 +889,14 @@ Armor[] Function GetOutfitSlotArmor(Int aiBipedSlot, String asOutfitName = "Defa
 			EndIf
 			
 			If bAddArmor
-				sReturnArmor[iCount] = kArmor
-				Debug.Trace("MFX/FXRegistry: SlotArmor[" + iCount + "] is " + sReturnArmor[iCount])
+				JArray.AddForm(jArmorList,kArmor)
+				;Debug.Trace("MFX/FXRegistry: Armor[" + iCount + "] for Slot " + aiBipedSlot + " is " + kArmor.GetName())
 				iCount += 1
 			EndIf
 		EndIf
 		i += 1
 	EndWhile
-	Return sReturnArmor
+	Return jArmorList
 EndFunction
 
 Function UpdateCurrentMount(Actor akMount)
