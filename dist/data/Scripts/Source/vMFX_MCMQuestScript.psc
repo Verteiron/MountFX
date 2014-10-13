@@ -12,6 +12,7 @@ Quest Property vMFX_FXRegistryQuest Auto
 String[] Pages
 
 Int[]	_SkinOptions
+Int[]	_SpellOptions
 Int[]	_PluginOptions
 Int[]	_DisabledSlots
 
@@ -99,6 +100,8 @@ Armor[] kSlotArmors59
 Armor[] kSlotArmors60
 Armor[] kSlotArmors61
 
+String[] sSpellNames
+Spell[]  kSpellList
 
 Bool _Updating
 
@@ -151,6 +154,7 @@ Event OnPageReset(string a_page)
 	vMFX_FXPluginBase MFXPlugin
 	PlayerMount = Game.GetPlayersLastRiddenHorse()
 	Int skIndex = 0
+	Debug.Trace("MFX/MCM: a_page is " + a_page)
 	If a_page == Pages[0] ; Armors / Skins
 		If !PlayerMount
 			AddHeaderOption("Get a mount, then try again!")
@@ -193,10 +197,23 @@ Event OnPageReset(string a_page)
 			Return
 		EndIf
 		SetCursorFillMode(TOP_TO_BOTTOM)
-		_MFXRegistry.RaceFilter = HorseRace
+		_SpellOptions = New Int[128]
+		CurrentRace = HorseRace
+		AddHeaderOption(CurrentRace.GetName())
 		Int i = 0
-		While i < _MFXRegistry.vMFX_regSortPluginsByRace.GetSize()
-			MFXPlugin = _MFXRegistry.vMFX_regSortPluginsByRace.GetAt(i) as vMFX_FXPluginBase
+		While i < kSpellList.Length
+			Spell kSpell = kSpellList[i]
+			If kSpell
+				Int iOptionFlags = OPTION_FLAG_NONE
+				Bool bDisplayOption = True
+				;Additional logic here if needed
+				If bDisplayOption
+					_SpellOptions[i] = AddToggleOption(sSpellNames[i],PlayerMount.HasSpell(kSpell),iOptionFlags)
+					Debug.Trace("MFX/MCM: Added Spell option " + kSpell + " with ID " + i)
+				Else
+					Debug.Trace("MFX/MCM: Skipped " + kSpell)
+				EndIf
+			EndIf
 			i += 1
 		EndWhile
 	ElseIf a_page == Pages[3] ; Plugin management
@@ -207,6 +224,22 @@ Event OnPageReset(string a_page)
 			_PluginOptions[i] = AddToggleOption(MFXPlugin.infoPluginName,MFXPlugin.infoEnabled)
 			i += 1
 		EndWhile
+	EndIf
+EndEvent
+
+Event OnOptionSelect(Int Option)
+	Int idx = _SpellOptions.Find(Option)
+	If idx >= 0 ; Spell option was selected
+		Spell kSpell = kSpellList[idx]
+		If kSpell
+			If PlayerMount.HasSpell(kSpell)
+				PlayerMount.RemoveSpell(kSpell)
+				SetToggleOptionValue(Option,False)
+			Else
+				PlayerMount.AddSpell(kSpell,False)
+				SetToggleOptionValue(Option,True)
+			EndIf
+		EndIf
 	EndIf
 EndEvent
 
@@ -302,6 +335,24 @@ Function UpdateOptions()
 		iBipedSlot += 1
 	EndWhile
 
+	Int jRaceFormMap = GetRegObj("RaceForms")
+	String sRaceUUID = jFormMap.GetStr(jRaceFormMap,CurrentRace)
+	Int jSpellList = GetFormLinkArray(CurrentRace,"Spells")
+	Debug.Trace("MFX/MCM:  Found " + JArray.Count(jSpellList) + " spells for Race " + CurrentRace + "!")
+	kSpellList = New Spell[128]
+	sSpellNames = New String[128]
+	i = 0
+	Int idx = 0
+	While i < JArray.Count(jSpellList)
+		Spell kSpell = JArray.GetForm(jSpelllist,i) as Spell
+		If kSpell
+			kSpellList[idx] = kSpell
+			sSpellNames[idx] = kSpell.GetName()
+			idx += 1
+		EndIf
+		i += 1
+	EndWhile
+	
 	DataVersion = _MFXRegistry.DataVersion
 	Debug.Trace("MFX/MCM: Updated MCM lists in " + (Utility.GetCurrentRealTime() - StartTime) + "s.")
 EndFunction

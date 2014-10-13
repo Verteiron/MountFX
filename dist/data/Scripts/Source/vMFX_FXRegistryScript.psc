@@ -434,8 +434,34 @@ Int Function RegisterFXFormList(vMFX_FXPluginBase MFXPlugin, Formlist akFXList, 
 EndFunction
 
 Int Function RegisterSpell(vMFX_FXPluginBase MFXPlugin, Race akRace, Spell akSpell)
+	String sUUIDPlugin = MFXPlugin.UUID	
+	If !sUUIDPlugin
+		Debug.Trace("MFX/FXRegistry/RegisterSpell: Plugin " + MFXPlugin + " isn't registered!")
+	EndIf
+	Int jPluginObj = GetRegObj("Plugins." + sUUIDPlugin)
 	
-	Return 0
+	If !akspell
+		Return 0
+	EndIf
+
+	Int NumFailures = 0
+	Int i = 0
+
+	CreateRegForm2ObjLink(akSpell,jPluginObj,"Plugin","Spells")	
+	CreateRegFormLink(MFXPlugin,akSpell,"Spells","Plugins")
+	CreateRegFormLink(akSpell,akRace,"Races","Spells")
+	
+	If MFXPlugin.dataRequiredArmorList != None
+		i = 0
+		While i < MFXPlugin.dataRequiredArmorList.GetSize()
+			Form kRequiredArmor = MFXPlugin.dataRequiredArmorList.GetAt(i)
+			CreateRegFormLink(akSpell,kRequiredArmor,"RequiredSpells","SpellsEnabled")
+			CreateRegFormLink(MFXPlugin,kRequiredArmor,"RequiredArmors","PluginsEnabled")
+			i += 1
+		EndWhile
+	EndIf
+	DataVersion += 1
+	Return 1
 EndFunction
 
 Int Function RegisterArmor(vMFX_FXPluginBase MFXPlugin, Race akRace, Armor akArmor)
