@@ -286,9 +286,8 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 	EndIf
 	_LockedBy = infoESPFile + " - '" + infoPluginName + "'"
 	;Debug.Trace("MFX/FXRegistry/RegisterPlugin: Checking for plugin " + infoESPFile + "/" + infoPluginName)
-
+	DataVersion += 1
 	String sPluginKey = "Plugins." + infoESPFile + "." + infoPluginName
-	
 	Int jPluginFormMap = GetRegObj("PluginForms")
 	String sUUIDPlugin
 	If !JFormMap.HasKey(jPluginFormMap,MFXPlugin) 
@@ -330,7 +329,6 @@ Int Function RegisterPlugin(vMFX_FXPluginBase MFXPlugin)
 		EndIf
 		iRace += 1
 	EndWhile
-	DataVersion += 1
 	
 	If MFXPlugin.dataArmorSlotNumbers.Length
 		Int i = 0
