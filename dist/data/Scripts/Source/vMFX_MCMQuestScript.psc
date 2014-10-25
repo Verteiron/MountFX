@@ -196,25 +196,57 @@ Event OnPageReset(string a_page)
 			AddHeaderOption("Get a mount, then try again!")
 			Return
 		EndIf
+		Bool bLeft = False ; Start false so first entry switches to left side 
+		Int iPosL = 0
+		Int iPosR = 1
 		SetCursorFillMode(TOP_TO_BOTTOM)
 		_SpellOptions = New Int[128]
 		CurrentRace = HorseRace
 		AddHeaderOption(CurrentRace.GetName())
-		Int i = 0
-		While i < kSpellList.Length
-			Spell kSpell = kSpellList[i]
-			If kSpell
-				Int iOptionFlags = OPTION_FLAG_NONE
-				Bool bDisplayOption = True
-				;Additional logic here if needed
-				If bDisplayOption
-					_SpellOptions[i] = AddToggleOption(sSpellNames[i],PlayerMount.HasSpell(kSpell),iOptionFlags)
-					Debug.Trace("MFX/MCM: Added Spell option " + kSpell + " with ID " + i)
+		Int jPluginList = GetFormLinkArray(CurrentRace,"Plugins")
+		Int iPlugin = 0
+		While iPlugin < JArray.Count(jPluginList)
+			vMFX_FXPluginBase kMFXPlugin = JArray.GetForm(jPluginList,iPlugin) as vMFX_FXPluginBase
+			Int jPluginSpellList = GetFormLinkArray(kMFXPlugin,"Spells")
+			Int i = 0
+			If JArray.Count(jPluginSpellList)
+				bLeft = !bLeft
+				If bLeft
+					SetCursorPosition(iPosL)
 				Else
-					Debug.Trace("MFX/MCM: Skipped " + kSpell)
+					SetCursorPosition(iPosR)
+				EndIf
+				AddHeaderOption(kMFXPlugin.infoPluginName)
+				If bLeft
+					iPosL += 2
+				Else
+					iPosR += 2
 				EndIf
 			EndIf
-			i += 1
+			While i < JArray.Count(jPluginSpellList)
+				Spell kSpell = JArray.GetForm(jPluginSpellList,i) as Spell
+				If kSpell
+					Int idx = kSpellList.Find(kSpell)
+					If idx > -1
+						Int iOptionFlags = OPTION_FLAG_NONE
+						Bool bDisplayOption = True
+						;Additional logic here if needed
+						If bDisplayOption
+							_SpellOptions[idx] = AddToggleOption(sSpellNames[idx],PlayerMount.HasSpell(kSpell),iOptionFlags)
+							If bLeft
+								iPosL += 2
+							Else
+								iPosR += 2
+							EndIf
+							Debug.Trace("MFX/MCM: Added Spell option " + kSpell + " with ID " + idx)
+						Else
+							Debug.Trace("MFX/MCM: Skipped " + kSpell)
+						EndIf
+					EndIf
+				EndIf
+				i += 1
+			EndWhile
+			iPlugin += 1
 		EndWhile
 	ElseIf a_page == Pages[3] ; Plugin management
 		SetCursorFillMode(LEFT_TO_RIGHT)
