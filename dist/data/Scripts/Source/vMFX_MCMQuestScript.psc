@@ -238,7 +238,7 @@ Event OnPageReset(string a_page)
 							Else
 								iPosR += 2
 							EndIf
-							Debug.Trace("MFX/MCM: Added Spell option " + kSpell + " with ID " + idx)
+							Debug.Trace("MFX/MCM: Added Spell option " + kSpell.GetName() + " with ID " + idx)
 						Else
 							Debug.Trace("MFX/MCM: Skipped " + kSpell)
 						EndIf
