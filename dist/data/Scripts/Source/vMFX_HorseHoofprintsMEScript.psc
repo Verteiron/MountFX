@@ -54,6 +54,11 @@ Event onEffectStart(Actor akTarget, Actor akCaster)
 	RegisterForAnimationEvent(_SelfRef,"HorseIdle")
 	RegisterForAnimationEvent(_SelfRef,"HorseLocomotion")
 	RegisterForAnimationEvent(_SelfRef,"HorseSprint")
+	RegisterForAnimationEvent(_SelfRef,"landEnd")
+	RegisterForAnimationEvent(_SelfRef,"forwardFallFromJump")
+	RegisterForAnimationEvent(_SelfRef,"SoundPlay")
+	RegisterForAnimationEvent(_SelfRef,"rearUpEnd")
+	
 	RegisterForSingleUpdate(1.0)
 EndEvent
 
