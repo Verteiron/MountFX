@@ -36,6 +36,8 @@ ImpactDataSet _BImpactSet
 
 Float _Emissive = 1.0
 
+Bool _bNIOPresent = false
+
 ;ObjectReference _SpawnPoint
 
 ;--=== Events ===--
@@ -58,6 +60,10 @@ Event onEffectStart(Actor akTarget, Actor akCaster)
 	RegisterForAnimationEvent(_SelfRef,"forwardFallFromJump")
 	RegisterForAnimationEvent(_SelfRef,"SoundPlay")
 	RegisterForAnimationEvent(_SelfRef,"rearUpEnd")
+
+	If NiOverride.GetScriptVersion() >= 6
+		_bNIOPresent = true
+	EndIf
 	
 	RegisterForSingleUpdate(1.0)
 EndEvent
@@ -70,20 +76,22 @@ Event onUpdate()
 		ArmorAddon FooArmorAddon = FooArmor.GetNthArmorAddon(0)
 		Debug.Trace(self + ": Armor is " + FooArmor)
 		Debug.Trace(self + ": ArmorAddon is " + FooArmor.GetNthArmorAddon(0))
-		;Function AddNodeOverrideFloat(ObjectReference ref, bool isFemale, string node, int key, int index, float value, bool persist) native global
-		;NiOverride.AddNodeOverrideFloat(_SelfRef,False,"eyeGlow",1,0,_Emissive,True)
-		
-		;Function AddOverrideFloat(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index, float value, bool persist) native global
-		
-		NiOverride.AddOverrideFloat(_SelfRef,False,FooArmor,FooArmorAddon,"EyeGlow",1,0,_Emissive,True)
-		
-		Debug.Trace(self + ": Called NiOverride!")
-		;float Function GetPropertyFloat(ObjectReference ref, bool firstPerson, Armor arm, ArmorAddon addon, string node, int key, int index) native global
-		Float EmissiveMult = NiOverride.GetPropertyFloat(_SelfRef,false,FooArmor,FooArmorAddon,"EyeGlow",1,0)
-		Debug.Trace(self + ": EmissiveMult is " + EmissiveMult)
-		;bool Function HasOverride(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index) native global
-		Debug.Trace(self + ": HasOverride is " + NiOverride.HasOverride(_SelfRef,False,FooArmor,FooArmorAddon,"EyeGlow",1,0))
-		_Emissive += 1.0
+
+		If _bNIOPresent
+			;Function AddNodeOverrideFloat(ObjectReference ref, bool isFemale, string node, int key, int index, float value, bool persist) native global
+			;NiOverride.AddNodeOverrideFloat(_SelfRef,False,"eyeGlow",1,0,_Emissive,True)
+			
+			;Function AddOverrideFloat(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index, float value, bool persist) native global
+			NiOverride.AddOverrideFloat(_SelfRef,False,FooArmor,FooArmorAddon,"EyeGlow",1,0,_Emissive,True)
+			
+			Debug.Trace(self + ": Called NiOverride!")
+			;float Function GetPropertyFloat(ObjectReference ref, bool firstPerson, Armor arm, ArmorAddon addon, string node, int key, int index) native global
+			Float EmissiveMult = NiOverride.GetPropertyFloat(_SelfRef,false,FooArmor,FooArmorAddon,"EyeGlow",1,0)
+			Debug.Trace(self + ": EmissiveMult is " + EmissiveMult)
+			;bool Function HasOverride(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index) native global
+			Debug.Trace(self + ": HasOverride is " + NiOverride.HasOverride(_SelfRef,False,FooArmor,FooArmorAddon,"EyeGlow",1,0))
+			_Emissive += 1.0
+		EndIf
 		RegisterForSingleUpdate(5)
 	Else
 		Debug.Trace(self + ": No armor!")
