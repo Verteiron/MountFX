@@ -69,41 +69,51 @@ Event onEffectStart(Actor akTarget, Actor akCaster)
 EndEvent
 
 Event onUpdate()
-	Armor FooArmor = _SelfRef.GetWornForm(0x00080000) as Armor
-	;Armor FooArmor = _SelfRef.GetWornForm(0x00000001) as Armor
+	; Armor FooArmor = _SelfRef.GetWornForm(0x00080000) as Armor
+	; ;Armor FooArmor = _SelfRef.GetWornForm(0x00000001) as Armor
 
-	If FooArmor
-		ArmorAddon FooArmorAddon = FooArmor.GetNthArmorAddon(0)
-		Debug.Trace(self + ": Armor is " + FooArmor)
-		Debug.Trace(self + ": ArmorAddon is " + FooArmor.GetNthArmorAddon(0))
+	; If FooArmor
+	; 	ArmorAddon FooArmorAddon = FooArmor.GetNthArmorAddon(0)
+	; 	Debug.Trace(self + ": Armor is " + FooArmor)
+	; 	Debug.Trace(self + ": ArmorAddon is " + FooArmor.GetNthArmorAddon(0))
 
-		If _bNIOPresent
-			;Function AddNodeOverrideFloat(ObjectReference ref, bool isFemale, string node, int key, int index, float value, bool persist) native global
-			;NiOverride.AddNodeOverrideFloat(_SelfRef,False,"eyeGlow",1,0,_Emissive,True)
+	; 	If _bNIOPresent
+	; 		;Function AddNodeOverrideFloat(ObjectReference ref, bool isFemale, string node, int key, int index, float value, bool persist) native global
+	; 		;NiOverride.AddNodeOverrideFloat(_SelfRef,False,"eyeGlow",1,0,_Emissive,True)
 			
-			;Function AddOverrideFloat(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index, float value, bool persist) native global
-			NiOverride.AddOverrideFloat(_SelfRef,False,FooArmor,FooArmorAddon,"EyeGlow",1,0,_Emissive,True)
+	; 		;Function AddOverrideFloat(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index, float value, bool persist) native global
+	; 		NiOverride.AddOverrideFloat(_SelfRef,False,FooArmor,FooArmorAddon,"EyeGlow",1,0,_Emissive,True)
 			
-			Debug.Trace(self + ": Called NiOverride!")
-			;float Function GetPropertyFloat(ObjectReference ref, bool firstPerson, Armor arm, ArmorAddon addon, string node, int key, int index) native global
-			Float EmissiveMult = NiOverride.GetPropertyFloat(_SelfRef,false,FooArmor,FooArmorAddon,"EyeGlow",1,0)
-			Debug.Trace(self + ": EmissiveMult is " + EmissiveMult)
-			;bool Function HasOverride(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index) native global
-			Debug.Trace(self + ": HasOverride is " + NiOverride.HasOverride(_SelfRef,False,FooArmor,FooArmorAddon,"EyeGlow",1,0))
-			_Emissive += 1.0
-		EndIf
-		RegisterForSingleUpdate(5)
-	Else
-		Debug.Trace(self + ": No armor!")
-		RegisterForSingleUpdate(1.0)
-	EndIf
+	; 		Debug.Trace(self + ": Called NiOverride!")
+	; 		;float Function GetPropertyFloat(ObjectReference ref, bool firstPerson, Armor arm, ArmorAddon addon, string node, int key, int index) native global
+	; 		Float EmissiveMult = NiOverride.GetPropertyFloat(_SelfRef,false,FooArmor,FooArmorAddon,"EyeGlow",1,0)
+	; 		Debug.Trace(self + ": EmissiveMult is " + EmissiveMult)
+	; 		;bool Function HasOverride(ObjectReference ref, bool isFemale, Armor arm, ArmorAddon addon, string node, int key, int index) native global
+	; 		Debug.Trace(self + ": HasOverride is " + NiOverride.HasOverride(_SelfRef,False,FooArmor,FooArmorAddon,"EyeGlow",1,0))
+	; 		_Emissive += 1.0
+	; 	EndIf
+	; 	RegisterForSingleUpdate(5)
+	; Else
+	; 	Debug.Trace(self + ": No armor!")
+	; 	RegisterForSingleUpdate(1.0)
+	; EndIf
 EndEvent
 
 Event OnAnimationEvent(ObjectReference akSource, String asEventName)
+	_iFootStepF = 0
+	_iFootStepB = 0
 	If asEventName == "HorseLocomotion"
 		GotoState("Walking")
 	ElseIf asEventName == "HorseSprint"
 		GotoState("Running")
+	ElseIf asEventName == "rearUpEnd"
+		_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseLPhalangesManus", 0, 0, -0.5, 128)
+		_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseFrontRLegPhalangesManus", 0, 0, -0.5, 128)
+	ElseIf asEventName == "landEnd"	
+		_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseLPhalangesManus", 0, 0, -0.5, 128)
+		_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseFrontRLegPhalangesManus", 0, 0, -0.5, 128)
+		_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseRPhalanxPrima", 0, 0, -0.5, 128)
+		_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseLPhalanxPrima", 0, 0, -0.5, 128)
 	EndIf
 EndEvent	
 	
@@ -122,13 +132,23 @@ State Walking
 			_iFootStepF += 1
 		ElseIf asEventName == "FootBack"
 			If _iFootStepB % 2
-				_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseLPhalanxPrima", 0, 0, -0.5, 64)
-			Else
 				_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseRPhalanxPrima", 0, 0, -0.5, 64)
+			Else
+				_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseLPhalanxPrima", 0, 0, -0.5, 64)
 			EndIf
 			_iFootStepB += 1
 		ElseIf asEventName == "HorseSprint"
 			GoToState("Running")
+		ElseIf asEventName == "landEnd"
+			_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseLPhalangesManus", 0, 0, -0.5, 128)
+			_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseFrontRLegPhalangesManus", 0, 0, -0.5, 128)
+			_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseRPhalanxPrima", 0, 0, -0.5, 128)
+			_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseLPhalanxPrima", 0, 0, -0.5, 128)
+		ElseIf asEventName == "rearUpEnd"
+			_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseLPhalangesManus", 0, 0, -0.5, 128)
+			_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseFrontRLegPhalangesManus", 0, 0, -0.5, 128)
+		ElseIf asEventName == "HorseIdle"
+			GoToState("")
 		EndIf
 	EndEvent
 EndState 
@@ -147,13 +167,23 @@ State Running
 			_iFootStepF += 1
 		ElseIf asEventName == "FootBack"
 			If _iFootStepB % 2
-				_SelfRef.PlayImpactEffect(vMFX_FootStepBRunningImpactSet, "HorseLPhalanxPrima", 0, 0, -0.5, 64)
-			Else
 				_SelfRef.PlayImpactEffect(vMFX_FootStepBRunningImpactSet, "HorseRPhalanxPrima", 0, 0, -0.5, 64)
+			Else
+				_SelfRef.PlayImpactEffect(vMFX_FootStepBRunningImpactSet, "HorseLPhalanxPrima", 0, 0, -0.5, 64)
 			EndIf
 			_iFootStepB += 1
 		ElseIf asEventName == "HorseLocomotion"
 			GoToState("Walking")
+		ElseIf asEventName == "landEnd"	
+			_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseLPhalangesManus", 0, 0, -0.5, 128)
+			_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseFrontRLegPhalangesManus", 0, 0, -0.5, 128)
+			_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseRPhalanxPrima", 0, 0, -0.5, 128)
+			_SelfRef.PlayImpactEffect(vMFX_FootStepBWalkingImpactSet, "HorseLPhalanxPrima", 0, 0, -0.5, 128)
+		ElseIf asEventName == "rearUpEnd"
+			_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseLPhalangesManus", 0, 0, -0.5, 128)
+			_SelfRef.PlayImpactEffect(vMFX_FootStepFWalkingImpactSet, "HorseFrontRLegPhalangesManus", 0, 0, -0.5, 128)
+		ElseIf asEventName == "HorseIdle"
+			GoToState("")
 		EndIf
 	EndEvent
 EndState
