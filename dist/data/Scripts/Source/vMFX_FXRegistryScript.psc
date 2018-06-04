@@ -481,21 +481,21 @@ Int Function RegisterArmor(vMFX_FXPluginBase MFXPlugin, Race akRace, Armor akArm
 	While i < NumAddons
 		FXArmorAA = akArmor.GetNthArmorAddon(i)
 		iFXArmorAASlotMask = FXArmorAA.GetSlotMask()
-		;Debug.Trace("MFX/FXRegistry: Armor " + akArmor.GetName() + "/" + i + " has mask " + iFXArmorAASlotMask)
+		; Debug.Trace("MFX/FXRegistry: Armor " + akArmor.GetName() + "/" + i + " has mask " + iFXArmorAASlotMask)
 		int h = 0x00000001
 		while (h < 0x80000000)
 			if Math.LogicalAND(iFXArmorAASlotMask, h)
-				;Debug.Trace("MFX/FXRegistry: Checking ArmorSlot " + h + " from " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName())
+				; Debug.Trace("MFX/FXRegistry: Checking ArmorSlot " + h + " from " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName())
 				Bool bResult = CheckArmorSlot(MFXPlugin,akRace,h)
 				iBipedSlot = GetBipedFromSlotMask(h)
 				If bResult && MFXPlugin.dataArmorSlotNumbers.Find(iBipedSlot) >= 0
-					;;Debug.Trace("MFXRegistry: Added " + iBipedSlot + ",iSlotCount is " + iSlotCount)
+					Debug.Trace("MFX/Registry: Added " + iBipedSlot + ",iSlotCount is " + iSlotCount)
 					iArmorSlots[iSlotCount] = iBipedSlot
 					iSlotCount += 1
 				ElseIf bResult && MFXPlugin.dataArmorSlotNumbers.Find(iBipedSlot) >= 0
 					;Mod lists this slot as being used, just not registered to it.
 				Else
-					Debug.Trace("MFX/FXRegistry: " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName() + ". Slot " + iBipedSlot + " is not registered or listed by plugin.",1)
+					Debug.Trace("MFX/FXRegistry: WARNING! " + MFXPlugin.infoESPFile + "/" + MFXPlugin.infoPluginName + "/" + akArmor.GetName() + ". Slot " + iBipedSlot + " is not registered or listed by plugin.",1)
 					NumFailures += 1
 				EndIf
 			endIf
